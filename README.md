@@ -97,7 +97,26 @@ You can stop, start, or restart the infrastructure pods using the Node script lo
   node scripts/manage_infra.js restart
   ```
 
+### 3. API Testing (Insomnia)
+For executing and testing API endpoints across REDDO services, an Insomnia collection is maintained in the project.
+* Import the collection file [insomnia/REDDO.insomnia_collection.json](file:///d:/Coding%20Projects/REDDO/insomnia/REDDO.insomnia_collection.json) into your Insomnia workspace.
+* Configure the base environment variable `base_url` (defaults to `http://localhost:8080` for local development).
+
 ---
 
 ## 💾 Schema Migrations (Patches)
 Database migrations are kept under the `db/patches` directory. Rather than mounting static configuration scripts in the container, the Go Coordinator (`Gate`) will parse and execute outstanding patches in numerical order upon starting up, creating the `schema_migrations` tracking table automatically.
+
+---
+
+## 🧱 Built Microservices
+
+### 🟢 1. Go API Gateway (`gate`)
+The ingress API coordinator for REDDO.
+* **Technology**: Go 1.26, Fiber v2, pgx/v5, amqp091-go
+* **Key Features**:
+  * **Auto-Migrations**: Automatically runs outstanding SQL patches in numerical order on startup.
+  * **Kahn's Graph Validation**: Validates submitted DAGs for circular dependencies and orphan tasks in $\mathcal{O}(V+E)$ time.
+  * **Transactional Persistence**: Writes workflow instance and task executions inside atomic SQL transactions.
+  * **Declarative AMQP Topology**: Idempotently declares exchange (`workflow-exchange`), queues (`java-tasks`, `node-tasks`), and bindings on boot.
+  * **Minimal Image Size**: Compiles a statically linked binary packaged in a minimal Alpine image (31.8 MB).

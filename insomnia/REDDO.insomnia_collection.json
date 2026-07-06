@@ -1,0 +1,112 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-07-07T00:00:00.000Z",
+  "__export_source": "insomnia.desktop.app:v9.0.0",
+  "resources": [
+    {
+      "_id": "wrk_1",
+      "parentId": null,
+      "modified": 1720300000000,
+      "created": 1720300000000,
+      "name": "REDDO Orchestrator",
+      "description": "API collection for testing REDDO services",
+      "scope": "collection",
+      "_type": "workspace"
+    },
+    {
+      "_id": "env_1",
+      "parentId": "wrk_1",
+      "modified": 1720300000000,
+      "created": 1720300000000,
+      "name": "Base Environment",
+      "data": {
+        "base_url": "http://localhost:8080"
+      },
+      "dataPropertyOrder": {
+        "&": [
+          "base_url"
+        ]
+      },
+      "color": null,
+      "isPrivate": false,
+      "metaSortKey": 1720300000000,
+      "_type": "environment"
+    },
+    {
+      "_id": "req_submit_valid",
+      "parentId": "wrk_1",
+      "modified": 1720300000000,
+      "created": 1720300000000,
+      "url": "{{ _.base_url }}/api/v1/workflows",
+      "name": "Submit Valid DAG",
+      "description": "",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"id\": \"wf-valid-01\",\n  \"name\": \"Order Processing Workflow\",\n  \"payload\": {\n    \"order_id\": \"12345\",\n    \"amount\": 99.99\n  },\n  \"dag\": {\n    \"tasks\": {\n      \"task_a\": {\n        \"worker\": \"java\",\n        \"input_data\": {},\n        \"dependencies\": []\n      },\n      \"task_b\": {\n        \"worker\": \"node\",\n        \"input_data\": {},\n        \"dependencies\": [\"task_a\"]\n      },\n      \"task_c\": {\n        \"worker\": \"java\",\n        \"input_data\": {},\n        \"dependencies\": [\"task_a\"]\n      },\n      \"task_d\": {\n        \"worker\": \"node\",\n        \"input_data\": {},\n        \"dependencies\": [\"task_b\", \"task_c\"]\n      }\n    }\n  }\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1720300000000,
+      "isPrivate": false,
+      "_type": "request"
+    },
+    {
+      "_id": "req_submit_circular",
+      "parentId": "wrk_1",
+      "modified": 1720300000000,
+      "created": 1720300000000,
+      "url": "{{ _.base_url }}/api/v1/workflows",
+      "name": "Submit Circular DAG (Error Expected)",
+      "description": "",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"id\": \"wf-invalid-circular\",\n  \"name\": \"Circular Dependency Workflow\",\n  \"payload\": {},\n  \"dag\": {\n    \"tasks\": {\n      \"task_a\": {\n        \"worker\": \"java\",\n        \"input_data\": {},\n        \"dependencies\": [\"task_c\"]\n      },\n      \"task_b\": {\n        \"worker\": \"node\",\n        \"input_data\": {},\n        \"dependencies\": [\"task_a\"]\n      },\n      \"task_c\": {\n        \"worker\": \"java\",\n        \"input_data\": {},\n        \"dependencies\": [\"task_b\"]\n      }\n    }\n  }\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1720200000000,
+      "isPrivate": false,
+      "_type": "request"
+    },
+    {
+      "_id": "req_submit_orphan",
+      "parentId": "wrk_1",
+      "modified": 1720300000000,
+      "created": 1720300000000,
+      "url": "{{ _.base_url }}/api/v1/workflows",
+      "name": "Submit Orphan DAG (Error Expected)",
+      "description": "",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"id\": \"wf-invalid-orphan\",\n  \"name\": \"Orphan Dependency Workflow\",\n  \"payload\": {},\n  \"dag\": {\n    \"tasks\": {\n      \"task_a\": {\n        \"worker\": \"java\",\n        \"input_data\": {},\n        \"dependencies\": [\"non_existent_task\"]\n      }\n    }\n  }\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1720100000000,
+      "isPrivate": false,
+      "_type": "request"
+    }
+  ]
+}

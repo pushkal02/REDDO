@@ -1,0 +1,35 @@
+# Stage 1: Build the Go binary using a modern Go environment
+FROM golang:1.26-alpine AS builder
+
+WORKDIR /src
+
+# Leverage container caching for dependencies
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy application source code
+COPY . .
+
+# Compile a statically linked Go binary:
+# - CGO_ENABLED=0 disables C dependencies, making the binary portable
+# - GOOS=linux compiles specifically for Linux environments (Kind cluster)
+# - -ldflags="-w -s" strips debugging symbols to drastically reduce binary size
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /app/gate ./cmd/gate
+
+# Stage 2: Create a minimal deployment image
+FROM alpine:3.20
+
+# Run as non-root user for security (defense-in-depth)
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+WORKDIR /app
+
+# Copy compiled binary from builder stage
+COPY --from=builder /app/gate /app/gate
+
+# Change ownership of binary to the non-root user
+RUN chown appuser:appgroup /app/gate
+USER appuser
+
+EXPOSE 8080
+
+ENTRYPOINT ["/app/gate"]
