@@ -1,5 +1,8 @@
-# Stage 1: Build stage using official Maven JDK 21 Alpine image
-FROM maven:3.9.9-eclipse-temurin-21-alpine AS build
+# Stage 1: Build stage using official Temurin JDK 25 Alpine image
+FROM eclipse-temurin:25-jdk-alpine AS build
+
+# Install Maven
+RUN apk add --no-cache maven
 
 WORKDIR /app
 
@@ -12,7 +15,7 @@ COPY src ./src
 RUN mvn package -DskipTests -B
 
 # Stage 2: Runtime stage
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 
 WORKDIR /app
 
