@@ -151,3 +151,13 @@ The Saga processing engine for REDDO workflows.
   * **Nested Transaction Boundaries**: Separates local business transaction scopes (ACID database writes like ledger adjustments) from orchestration metadata logging, ensuring status tracking updates are committed even on business failures.
   * **Decentralized Saga Compensations**: Evaluates the DAG definition at runtime to execute compensating actions (e.g., refunds, cancellations) in reverse topological order if a downstream workflow step fails.
 
+### 🟢 3. Node.js 24 I/O Worker (`worker`)
+The event-driven I/O runner for REDDO workflows.
+* **Technology**: Node.js 24, TypeScript, pnpm, amqplib, pg
+* **Key Features**:
+  * **Asynchronous Event Loop**: High-throughput task execution without thread overhead, easily respecting strict 256Mi memory limits.
+  * **Decentralized DAG Progression**: Queries execution history in PostgreSQL and automatically publishes downstream dependencies to RabbitMQ.
+  * **Deterministic Chaos Simulation**: Supports executing `ZOMBIE_HANG` (unresolved promise) and `FATAL_CRASH` (`process.exit(1)`) instructions.
+  * **Poison Pill Prevention**: Employs manual queue acknowledgment flow to reject bad task parameters without infinite requeue loops.
+
+

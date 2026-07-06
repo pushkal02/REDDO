@@ -20,3 +20,20 @@ Thumbs.db
 
 # Tutorial tracker (must never be committed to repo)
 TUTORIAL_TRACKER.md
+
+# Node.js dependencies and build artifacts
+node_modules/
+dist/
+worker/dist/
+.env
+
+# Java target directories
+target/
+broker/target/
+*.class
+*.jar
+*.war
+.classpath
+.project
+.settings/
+.metadata/
