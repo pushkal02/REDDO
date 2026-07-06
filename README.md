@@ -97,7 +97,28 @@ You can stop, start, or restart the infrastructure pods using the Node script lo
   node scripts/manage_infra.js restart
   ```
 
-### 3. API Testing (Insomnia)
+### 3. Service Access & Port Forwarding
+To interact with the running Kubernetes pods from your host machine, you must expose their ports.
+
+> [!IMPORTANT]
+> The backing infrastructure pods **must be started first** (`node scripts/manage_infra.js start`) before attempting to port forward.
+
+Run the helper script [scripts/port_forward.js](file:///d:/Coding%20Projects/REDDO/scripts/port_forward.js) to establish local port-forwarding tunnels for all services:
+```bash
+node scripts/port_forward.js
+```
+
+Once running, the services can be accessed at the following host addresses:
+
+| Service | Local Address | Protocol / Access details |
+| :--- | :--- | :--- |
+| **Go API Gateway (`gate`)** | `http://localhost:8080` | HTTP (Ingress API gateway, check `/health`) |
+| **RabbitMQ Management** | `http://localhost:15672` | HTTP Management Console (User: `guest`, Pass: `guest`) |
+| **RabbitMQ Broker** | `localhost:5672` | AMQP (Task message exchange) |
+| **PostgreSQL Database** | `localhost:5432` | SQL Client (User: `postgres`, Pass: `postgres`, DB: `reddo`) |
+| **Redis Database** | `localhost:6379` | Redis Client (DLM lock manager) |
+
+### 4. API Testing (Insomnia)
 For executing and testing API endpoints across REDDO services, an Insomnia collection is maintained in the project.
 * Import the collection file [insomnia/REDDO.insomnia_collection.json](file:///d:/Coding%20Projects/REDDO/insomnia/REDDO.insomnia_collection.json) into your Insomnia workspace.
 * Configure the base environment variable `base_url` (defaults to `http://localhost:8080` for local development).
