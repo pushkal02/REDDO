@@ -1,12 +1,13 @@
 import { Pool } from 'pg';
 import { config } from './config';
+import { logger } from './logger';
 
 export const pool = new Pool({
   connectionString: config.databaseUrl,
 });
 
 pool.on('error', (err) => {
-  console.error('[Database] Unexpected error on idle client', err);
+  logger.error(`Unexpected error on idle database client: ${err.message}`);
 });
 
 export interface TaskDefinition {
@@ -35,7 +36,9 @@ export async function updateTaskStatus(
   taskExecutionId: string,
   status: string,
   outputData?: any,
-  errorMessage?: string
+  errorMessage?: string,
+  correlationId?: string,
+  requestId?: string
 ): Promise<void> {
   const fields = ['status = $2', 'updated_at = NOW()'];
   const values: any[] = [taskExecutionId, status];
@@ -56,12 +59,14 @@ export async function updateTaskStatus(
     WHERE id = $1
   `;
   await pool.query(query, values);
-  console.log(`[Database] Task execution ${taskExecutionId} status updated to ${status}`);
+  logger.info(`Task execution ${taskExecutionId} status updated to ${status}`, correlationId, requestId);
 }
 
 export async function completeTaskAndProgress(
   taskExecutionId: string,
-  publishCallback: (taskExecId: string, workflowId: string, taskKey: string, inputData: any, worker: string) => Promise<void>
+  correlationId: string,
+  requestId: string,
+  publishCallback: (taskExecId: string, workflowId: string, taskKey: string, inputData: any, worker: string, correlationId: string, requestId: string) => Promise<void>
 ): Promise<void> {
   const client = await pool.connect();
   try {
@@ -81,14 +86,14 @@ export async function completeTaskAndProgress(
     const workflowId = updateRes.rows[0].workflow_instance_id;
 
     await client.query('COMMIT');
-    console.log(`[Database] Task ${taskExecutionId} marked COMPLETED inside transaction.`);
+    logger.info(`Task ${taskExecutionId} marked COMPLETED inside transaction.`, correlationId, requestId);
 
     // 2. Progress DAG execution
-    await progressDAG(workflowId, publishCallback);
+    await progressDAG(workflowId, correlationId, requestId, publishCallback);
 
-  } catch (err) {
+  } catch (err: any) {
     await client.query('ROLLBACK');
-    console.error(`[Database] Failed to complete task and progress DAG: ${err}`);
+    logger.error(`Failed to complete task and progress DAG: ${err.message}`, correlationId, requestId);
     throw err;
   } finally {
     client.release();
@@ -97,7 +102,9 @@ export async function completeTaskAndProgress(
 
 export async function progressDAG(
   workflowId: string,
-  publishCallback: (taskExecId: string, workflowId: string, taskKey: string, inputData: any, worker: string) => Promise<void>
+  correlationId: string,
+  requestId: string,
+  publishCallback: (taskExecId: string, workflowId: string, taskKey: string, inputData: any, worker: string, correlationId: string, requestId: string) => Promise<void>
 ): Promise<void> {
   const client = await pool.connect();
   try {
@@ -147,7 +154,7 @@ export async function progressDAG(
       }
 
       if (!compensationsActive) {
-        console.log(`[Database] All compensation tasks completed. Transitioning workflow ${workflowId} to FAILED.`);
+        logger.info(`All compensation tasks completed. Transitioning workflow ${workflowId} to FAILED.`, correlationId, requestId);
         await client.query('UPDATE workflow_instances SET status = $1, updated_at = NOW() WHERE id = $2', ['FAILED', workflowId]);
       }
 
@@ -205,21 +212,21 @@ export async function progressDAG(
         [task.id]
       );
       // Publish task message to broker
-      await publishCallback(task.id, workflowId, task.taskKey, task.inputData, task.worker);
+      await publishCallback(task.id, workflowId, task.taskKey, task.inputData, task.worker, correlationId, requestId);
       anyTaskRunning = true;
     }
 
     // If no tasks are running and none are pending, the entire workflow is successfully complete!
     if (!anyTaskRunning && !anyTaskPending) {
-      console.log(`[Database] All DAG tasks completed successfully! Transitioning workflow ${workflowId} status to COMPLETED.`);
+      logger.info(`All DAG tasks completed successfully! Transitioning workflow ${workflowId} status to COMPLETED.`, correlationId, requestId);
       await client.query('UPDATE workflow_instances SET status = $1, updated_at = NOW() WHERE id = $2', ['COMPLETED', workflowId]);
     }
 
     await client.query('COMMIT');
 
-  } catch (err) {
+  } catch (err: any) {
     await client.query('ROLLBACK');
-    console.error(`[Database] Error processing DAG state for workflow ${workflowId}:`, err);
+    logger.error(`Error processing DAG state for workflow ${workflowId}: ${err.message}`, correlationId, requestId);
     throw err;
   } finally {
     client.release();
@@ -230,13 +237,15 @@ export async function handleTaskFailure(
   workflowId: string,
   failedTaskExecId: string,
   errorMessage: string,
-  publishCallback: (taskExecId: string, workflowId: string, taskKey: string, inputData: any, worker: string) => Promise<void>
+  correlationId: string,
+  requestId: string,
+  publishCallback: (taskExecId: string, workflowId: string, taskKey: string, inputData: any, worker: string, correlationId: string, requestId: string) => Promise<void>
 ): Promise<void> {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
-    console.warn(`[Database] Handling failure of task ${failedTaskExecId}. Transitioning workflow ${workflowId} to COMPENSATING.`);
+    logger.warn(`Handling failure of task ${failedTaskExecId}. Transitioning workflow ${workflowId} to COMPENSATING.`, correlationId, requestId);
 
     // 1. Mark the failed task execution status as FAILED
     await client.query(
@@ -276,7 +285,7 @@ export async function handleTaskFailure(
         const taskDef = dag.tasks[exec.task_key];
         if (taskDef && taskDef.compensation) {
           const compensationTaskKey = taskDef.compensation;
-          console.log(`[Database] Completed task ${exec.task_key} has compensating action: ${compensationTaskKey}`);
+          logger.info(`Completed task ${exec.task_key} has compensating action: ${compensationTaskKey}`, correlationId, requestId);
 
           // Find the compensating task execution record
           const compExec = execMap.get(compensationTaskKey);
@@ -291,10 +300,10 @@ export async function handleTaskFailure(
 
             // Publish compensating task message
             const compTaskDef = dag.tasks[compensationTaskKey];
-            await publishCallback(compExec.id, workflowId, compensationTaskKey, originalInputs, compTaskDef.worker);
+            await publishCallback(compExec.id, workflowId, compensationTaskKey, originalInputs, compTaskDef.worker, correlationId, requestId);
             compensationTriggered = true;
           } else {
-            console.error(`[Database] Compensation task record ${compensationTaskKey} not found in database.`);
+            logger.error(`Compensation task record ${compensationTaskKey} not found in database.`, correlationId, requestId);
           }
         }
       }
@@ -302,7 +311,7 @@ export async function handleTaskFailure(
 
     // If no compensations were defined or triggered, fail the workflow immediately
     if (!compensationTriggered) {
-      console.log(`[Database] No compensations defined for completed steps. Workflow fails immediately.`);
+      logger.info(`No compensations defined for completed steps. Workflow fails immediately.`, correlationId, requestId);
       await client.query(
         "UPDATE workflow_instances SET status = 'FAILED', updated_at = NOW() WHERE id = $1",
         [workflowId]
@@ -311,9 +320,9 @@ export async function handleTaskFailure(
 
     await client.query('COMMIT');
 
-  } catch (err) {
+  } catch (err: any) {
     await client.query('ROLLBACK');
-    console.error(`[Database] Failed to handle task failure: ${err}`);
+    logger.error(`Failed to handle task failure: ${err.message}`, correlationId, requestId);
     throw err;
   } finally {
     client.release();

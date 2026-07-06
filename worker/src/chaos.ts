@@ -1,16 +1,20 @@
+import { logger } from './logger';
+
 export async function executeTaskWithChaos(
   taskExecutionId: string,
   taskKey: string,
-  inputData: any
+  inputData: any,
+  correlationId?: string,
+  requestId?: string
 ): Promise<any> {
-  console.log(`[Chaos] Evaluating execution of task: ${taskKey} (Execution ID: ${taskExecutionId})`);
+  logger.info(`Evaluating execution of task: ${taskKey} (Execution ID: ${taskExecutionId})`, correlationId, requestId);
   
   // Extract potential chaos instructions
   const chaosCommand = inputData?.chaos_command || inputData?.chaos || null;
   const shouldFail = inputData?.fail === true || inputData?.fail === 'true';
 
   if (chaosCommand === 'ZOMBIE_HANG') {
-    console.warn(`[Chaos] 🔥 TRIGGERED ZOMBIE_HANG for task ${taskKey} (${taskExecutionId}). This process thread will hang indefinitely...`);
+    logger.warn(`🔥 TRIGGERED ZOMBIE_HANG for task ${taskKey} (${taskExecutionId}). This process thread will hang indefinitely...`, correlationId, requestId);
     // Create a promise that never resolves
     await new Promise<void>(() => {
       // Intentionally empty. Event loop remains active but this execution path never finishes.
@@ -19,20 +23,20 @@ export async function executeTaskWithChaos(
   }
 
   if (chaosCommand === 'FATAL_CRASH') {
-    console.error(`[Chaos] 💀 TRIGGERED FATAL_CRASH for task ${taskKey} (${taskExecutionId}). Exiting process immediately...`);
+    logger.error(`💀 TRIGGERED FATAL_CRASH for task ${taskKey} (${taskExecutionId}). Exiting process immediately...`, correlationId, requestId);
     // Exit process immediately with non-zero exit code
     process.exit(1);
   }
 
   if (shouldFail) {
-    console.error(`[Chaos] ⚠️ TRIGGERED DETERMINISTIC FAILURE for task ${taskKey} (${taskExecutionId}). Throwing error...`);
+    logger.error(`⚠️ TRIGGERED DETERMINISTIC FAILURE for task ${taskKey} (${taskExecutionId}). Throwing error...`, correlationId, requestId);
     throw new Error(`Deterministic failure triggered for task: ${taskKey}`);
   }
 
   // Normal Mock I/O Execution
-  console.log(`[Chaos] Executing task ${taskKey} (Mocking I/O lag)...`);
+  logger.info(`Executing task ${taskKey} (Mocking I/O lag)...`, correlationId, requestId);
   await new Promise((resolve) => setTimeout(resolve, 500)); // 500ms delay to simulate disk/network latency
-  console.log(`[Chaos] Task ${taskKey} executed successfully.`);
+  logger.info(`Task ${taskKey} executed successfully.`, correlationId, requestId);
   
   return {
     status: 'success',

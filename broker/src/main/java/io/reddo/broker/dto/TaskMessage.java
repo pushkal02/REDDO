@@ -21,4 +21,10 @@ public class TaskMessage {
 
     @JsonProperty("input_data")
     private JsonNode inputData; // Represents raw JSON payload of the task
+
+    @JsonProperty("correlation_id")
+    private String correlationID;
+
+    @JsonProperty("request_id")
+    private String requestID;
 }

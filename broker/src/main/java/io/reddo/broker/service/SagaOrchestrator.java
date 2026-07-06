@@ -379,11 +379,19 @@ public class SagaOrchestrator {
             return;
         }
 
+        String correlationID = org.slf4j.MDC.get("correlationId");
+        if (correlationID == null || correlationID.isEmpty()) {
+            correlationID = workflowId;
+        }
+        String requestID = UUID.randomUUID().toString();
+
         TaskMessage msg = TaskMessage.builder()
                 .taskExecutionID(taskExecId)
                 .workflowInstanceID(workflowId)
                 .taskKey(taskKey)
                 .inputData(inputData)
+                .correlationID(correlationID)
+                .requestID(requestID)
                 .build();
 
         log.info("[Orchestrator] Publishing task {} ({}) to routing key {}", taskKey, taskExecId, routingKey);

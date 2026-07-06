@@ -5,6 +5,7 @@ import io.reddo.broker.dto.TaskMessage;
 import io.reddo.broker.service.SagaOrchestrator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.support.AmqpHeaders;
 import org.springframework.messaging.handler.annotation.Header;
@@ -27,6 +28,10 @@ public class TaskListener {
      */
     @RabbitListener(queues = "java-tasks")
     public void onTaskReceived(TaskMessage message, Channel channel, @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag) {
+        // Set MDC diagnostic variables
+        MDC.put("correlationId", message.getCorrelationID() != null ? message.getCorrelationID() : "-");
+        MDC.put("requestId", message.getRequestID() != null ? message.getRequestID() : "-");
+
         log.info("[Listener] Consumed task message for execution ID: {}, key: {}", 
                 message.getTaskExecutionID(), message.getTaskKey());
 
@@ -44,15 +49,13 @@ public class TaskListener {
 
             try {
                 // POISON PILL PREVENTION:
-                // We basicNack with requeue=false. If we requeue a deterministic business failure 
-                // (e.g. invalid input, insufficient balance), RabbitMQ will redeliver it to the worker
-                // instantly, causing an infinite CPU-hogging loop.
-                // In production, un-requeued failed messages should route to a Dead Letter Exchange (DLX).
                 channel.basicNack(deliveryTag, false, false);
                 log.warn("[Listener] Rejected (NACKed) message delivery tag {} without requeuing.", deliveryTag);
             } catch (IOException ioEx) {
                 log.error("[Listener] Failed to NACK message: {}", ioEx.getMessage());
             }
+        } finally {
+            MDC.clear();
         }
     }
 }

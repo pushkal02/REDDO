@@ -1,43 +1,44 @@
 import { connectRabbitMQ, closeRabbitMQ } from './mq';
 import { pool } from './db';
+import { logger } from './logger';
 
 async function bootstrap() {
-  console.log('[Worker] Starting REDDO Node.js I/O Worker microservice...');
+  logger.info('Starting REDDO Node.js I/O Worker microservice...');
 
   try {
     // Test Database connection
-    console.log('[Worker] Verifying database connection pool...');
+    logger.info('Verifying database connection pool...');
     await pool.query('SELECT 1');
-    console.log('[Worker] Database connection pool verified successfully.');
+    logger.info('Database connection pool verified successfully.');
 
     // Connect to RabbitMQ and start consuming
     await connectRabbitMQ();
-    console.log('[Worker] Worker microservice is running and listening for tasks.');
+    logger.info('Worker microservice is running and listening for tasks.');
 
-  } catch (err) {
-    console.error('[Worker] Critical startup failure:', err);
+  } catch (err: any) {
+    logger.error(`Critical startup failure: ${err.message}`);
     process.exit(1);
   }
 }
 
 // Graceful Shutdown logic
 async function shutdown(signal: string) {
-  console.log(`[Worker] Received shutdown signal (${signal}). Initiating graceful shutdown...`);
+  logger.info(`Received shutdown signal (${signal}). Initiating graceful shutdown...`);
   
   try {
     // 1. Close RabbitMQ consumer and connections
     await closeRabbitMQ();
 
     // 2. End PostgreSQL connection pool
-    console.log('[Worker] Ending database connection pool...');
+    logger.info('Ending database connection pool...');
     await pool.end();
-    console.log('[Worker] Database connection pool ended.');
+    logger.info('Database connection pool ended.');
 
-    console.log('[Worker] Graceful shutdown completed. Exiting process.');
+    logger.info('Graceful shutdown completed. Exiting process.');
     process.exit(0);
 
-  } catch (err) {
-    console.error('[Worker] Error during graceful shutdown:', err);
+  } catch (err: any) {
+    logger.error(`Error during graceful shutdown: ${err.message}`);
     process.exit(1);
   }
 }

@@ -18,6 +18,8 @@ type TaskMessage struct {
 	WorkflowInstanceID string          `json:"workflow_instance_id"`
 	TaskKey            string          `json:"task_key"`
 	InputData          json.RawMessage `json:"input_data"`
+	CorrelationID      string          `json:"correlation_id"`
+	RequestID          string          `json:"request_id"`
 }
 
 // Client wraps the RabbitMQ connection and channel, asserting topology on startup.
