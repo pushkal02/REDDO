@@ -21,4 +21,5 @@ type TaskDefinition struct {
 	Worker       string          `json:"worker"` // "java" or "node"
 	InputData    json.RawMessage `json:"input_data"`
 	Dependencies []string        `json:"dependencies"`
+	Compensation string          `json:"compensation,omitempty"`
 }

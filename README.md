@@ -141,3 +141,13 @@ The ingress API coordinator for REDDO.
   * **Transactional Persistence**: Writes workflow instance and task executions inside atomic SQL transactions.
   * **Declarative AMQP Topology**: Idempotently declares exchange (`workflow-exchange`), queues (`java-tasks`, `node-tasks`), and bindings on boot.
   * **Minimal Image Size**: Compiles a statically linked binary packaged in a minimal Alpine image (31.8 MB).
+
+### ☕ 2. Transactional Worker (`broker`)
+The Saga processing engine for REDDO workflows.
+* **Technology**: Java 25, Spring Boot 3.4.1, Spring Data JPA, Spring AMQP, Redisson 4.6.1
+* **Key Features**:
+  * **Project Loom Virtual Threads**: Built with high-performance virtual threads to scale database and queue operations concurrently without reactive code overhead.
+  * **Distributed Lock Manager**: Uses Redisson lock watchdogs (`SETNX` with auto-extending TTL) to guarantee task execution idempotency, protecting against duplicate message deliveries.
+  * **Nested Transaction Boundaries**: Separates local business transaction scopes (ACID database writes like ledger adjustments) from orchestration metadata logging, ensuring status tracking updates are committed even on business failures.
+  * **Decentralized Saga Compensations**: Evaluates the DAG definition at runtime to execute compensating actions (e.g., refunds, cancellations) in reverse topological order if a downstream workflow step fails.
+

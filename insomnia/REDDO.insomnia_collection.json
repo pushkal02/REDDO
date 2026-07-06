@@ -107,6 +107,56 @@
       "metaSortKey": -1720100000000,
       "isPrivate": false,
       "_type": "request"
+    },
+    {
+      "_id": "req_submit_saga_rollback",
+      "parentId": "wrk_1",
+      "modified": 1720300000000,
+      "created": 1720300000000,
+      "url": "{{ _.base_url }}/api/v1/workflows",
+      "name": "Submit Saga Rollback DAG",
+      "description": "",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"id\": \"wf-saga-rollback-01\",\n  \"name\": \"Saga Transactional Rollback Test\",\n  \"payload\": {\n    \"account_id\": \"acc-alice\",\n    \"amount\": 100.00\n  },\n  \"dag\": {\n    \"tasks\": {\n      \"task_a\": {\n        \"worker\": \"java\",\n        \"input_data\": {\n          \"account_id\": \"acc-alice\",\n          \"amount\": 100.00\n        },\n        \"dependencies\": []\n      },\n      \"task_b\": {\n        \"worker\": \"java\",\n        \"input_data\": {\n          \"account_id\": \"acc-alice\",\n          \"amount\": 100.00,\n          \"fail\": true\n        },\n        \"dependencies\": [\"task_a\"]\n      }\n    }\n  }\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1720000000000,
+      "isPrivate": false,
+      "_type": "request"
+    },
+    {
+      "_id": "req_submit_saga_compensation",
+      "parentId": "wrk_1",
+      "modified": 1720300000000,
+      "created": 1720300000000,
+      "url": "{{ _.base_url }}/api/v1/workflows",
+      "name": "Submit Saga Compensation DAG",
+      "description": "",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"id\": \"wf-saga-compensation-01\",\n  \"name\": \"Saga Transactional Compensation Test\",\n  \"payload\": {\n    \"account_id\": \"acc-bob\",\n    \"amount\": 50.00\n  },\n  \"dag\": {\n    \"tasks\": {\n      \"charge_payment\": {\n        \"worker\": \"java\",\n        \"input_data\": {\n          \"account_id\": \"acc-bob\",\n          \"amount\": 50.00\n        },\n        \"dependencies\": [],\n        \"compensation\": \"refund_payment\"\n      },\n      \"refund_payment\": {\n        \"worker\": \"java\",\n        \"input_data\": {\n          \"account_id\": \"acc-bob\",\n          \"amount\": 50.00\n        },\n        \"dependencies\": [\"__SAGA_FAIL__\"]\n      },\n      \"reserve_inventory\": {\n        \"worker\": \"java\",\n        \"input_data\": {\n          \"fail\": true\n        },\n        \"dependencies\": [\"charge_payment\"]\n      }\n    }\n  }\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1719900000000,
+      "isPrivate": false,
+      "_type": "request"
     }
   ]
 }

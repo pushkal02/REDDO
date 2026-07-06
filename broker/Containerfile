@@ -1,0 +1,28 @@
+# Stage 1: Build stage using official Maven JDK 21 Alpine image
+FROM maven:3.9.9-eclipse-temurin-21-alpine AS build
+
+WORKDIR /app
+
+# Copy pom.xml and fetch dependencies first to leverage Docker layer caching
+COPY pom.xml .
+RUN mvn dependency:go-offline -B
+
+# Copy source and build package
+COPY src ./src
+RUN mvn package -DskipTests -B
+
+# Stage 2: Runtime stage
+FROM eclipse-temurin:21-jre-alpine
+
+WORKDIR /app
+
+# Copy built JAR from build stage
+COPY --from=build /app/target/broker-1.0.0.jar app.jar
+
+# Expose broker port
+EXPOSE 8081
+
+# Optimize JVM settings for container deployment under memory constraints
+# -XX:+UseSerialGC is more efficient for single-core or low-memory (e.g., 512Mi) containers compared to G1GC.
+# -XX:MaxRAMPercentage=75.0 allows the JVM to dynamically adjust heap based on Pod resource limits.
+ENTRYPOINT ["java", "-XX:+UseSerialGC", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]

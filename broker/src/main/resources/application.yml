@@ -1,0 +1,59 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: broker
+  
+  # Enable Project Loom Virtual Threads
+  threads:
+    virtual:
+      enabled: true
+
+  # Database connection properties
+  datasource:
+    url: jdbc:postgresql://localhost:5432/reddo
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 20000
+
+  # JPA / Hibernate configuration
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: validate # Database schema migrations are run via Go Gateway migrations
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  # RabbitMQ connection properties
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+    listener:
+      simple:
+        # Manual acknowledgment allows us to commit DB + release lock before acking
+        acknowledge-mode: manual
+        # Prefetch = 1 ensures work is distributed evenly and task processing is serialized per worker thread
+        prefetch: 1
+
+  # Redis config for Redisson Distributed Lock Manager (DLM)
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+# Logging configurations
+logging:
+  level:
+    root: INFO
+    io.reddo.broker: DEBUG
+    org.springframework.transaction: INFO
