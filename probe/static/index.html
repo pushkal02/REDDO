@@ -27,7 +27,7 @@
             cyber: {
               black: '#030407',
               slate: '#090d16',
-              card: 'rgba(9, 13, 22, 0.7)',
+              card: 'rgba(9, 13, 22, 0.75)',
               cyan: '#00f0ff',
               purple: '#bd00ff',
               red: '#ff0055',
@@ -80,7 +80,7 @@
   <!-- TOP HEADER -->
   <header class="sticky top-0 z-50 flex items-center justify-between px-8 py-4 bg-cyber-black/95 backdrop-blur-md border-b border-white/5">
     <div class="flex items-center gap-4">
-      <div class="w-9 height-9 rounded-lg bg-gradient-to-br from-cyber-purple to-cyber-cyan shadow-[0_0_15px_rgba(0,240,255,0.3)] relative after:content-[''] after:absolute after:top-1/4 after:left-1/4 after:w-1/2 after:after:h-1/2 after:bg-black after:rounded-full"></div>
+      <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-cyber-purple to-cyber-cyan shadow-[0_0_15px_rgba(0,240,255,0.3)] relative after:content-[''] after:absolute after:top-1/4 after:left-1/4 after:w-1/2 after:h-1/2 after:bg-black after:rounded-full"></div>
       <div>
         <h1 class="text-xl font-extrabold tracking-widest bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">REDDO SAGA PLATFORM</h1>
         <p class="text-xs text-cyber-cyan font-mono tracking-wider">REALTIME OBSERVABILITY & CHAOS CONTROL</p>
@@ -88,6 +88,16 @@
       <div class="ml-6 px-4 py-1 rounded-full text-xs font-mono font-bold tracking-wider bg-cyber-green/5 border border-cyber-green/20 text-cyber-green transition-all" id="master-engine-banner">
         SAGA ENGINE OPERATING NORMALLY
       </div>
+    </div>
+
+    <!-- TABS NAVIGATION -->
+    <div class="flex bg-white/5 p-1 rounded-lg border border-white/5">
+      <button class="px-4 py-1.5 rounded-md text-xs font-semibold tracking-wider transition-all bg-cyber-cyan/15 text-cyber-cyan border border-cyber-cyan/20" id="tab-metrics">
+        📊 Observability Deck
+      </button>
+      <button class="px-4 py-1.5 rounded-md text-xs font-semibold tracking-wider transition-all text-slate-400 hover:text-slate-200" id="tab-logs">
+        📟 Log Terminal Deck
+      </button>
     </div>
 
     <!-- CONNECTION STATE -->
@@ -107,8 +117,8 @@
     </div>
   </header>
 
-  <!-- DASHBOARD MAIN CONTENT -->
-  <main class="flex-1 grid grid-cols-[380px_1fr] gap-6 p-6 max-w-[1920px] mx-auto w-full">
+  <!-- DECK 1: METRICS OBSERVABILITY DECK -->
+  <main class="flex-1 grid grid-cols-[380px_1fr] gap-6 p-6 max-w-[1920px] mx-auto w-full" id="deck-metrics-container">
 
     <!-- LEFT SIDEBAR: CHAOS INJECTION CONSOLE -->
     <div class="flex flex-col gap-5 bg-cyber-card backdrop-blur-xl border border-white/5 rounded-2xl p-6 shadow-2xl relative overflow-hidden before:content-[''] before:absolute before:top-0 before:left-0 before:w-full before:h-[2px] before:bg-gradient-to-r before:from-transparent before:via-white/10 before:to-transparent">
@@ -227,7 +237,6 @@
       
       <!-- SUB-SECTION 1: COMBINED OVERVIEW CHARTS -->
       <div class="grid grid-cols-3 gap-6">
-        
         <!-- Queue depths -->
         <div class="bg-cyber-card border border-white/5 rounded-2xl p-5 shadow-xl flex flex-col gap-3">
           <div class="flex justify-between items-center border-b border-white/5 pb-2">
@@ -260,7 +269,6 @@
             <canvas id="memChart"></canvas>
           </div>
         </div>
-
       </div>
 
       <!-- SUB-SECTION 2: DEDICATED INDIVIDUAL SERVICE METRICS GRID -->
@@ -281,14 +289,59 @@
         </div>
       </div>
 
-      <!-- SUB-SECTION 3: TRACE LOGGING TERMINAL -->
+      <!-- SUB-SECTION 3: CONCISE LOCAL TERMINAL (Quick System Info) -->
       <div class="bg-cyber-card border border-white/5 rounded-2xl p-5 shadow-xl flex flex-col gap-3">
         <div class="flex justify-between items-center border-b border-white/5 pb-1">
-          <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Realtime Trace Logging 📟</h3>
+          <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Console Terminal Logger</h3>
           <span class="text-[10px] text-cyber-green font-mono">system.log</span>
         </div>
-        <div class="bg-black/60 rounded-xl border border-white/5 p-4 font-mono text-xs text-cyber-green h-36 overflow-y-auto flex flex-col gap-1.5 shadow-[inset_0_0_15px_rgba(0,0,0,0.9)]" id="terminal-console">
-          <div class="console-line system border-l-2 border-cyber-cyan pl-2">[System] Observability stream established. Monitoring saga log pipelines...</div>
+        <div class="bg-black/60 rounded-xl border border-white/5 p-4 font-mono text-xs text-cyber-green h-24 overflow-y-auto flex flex-col gap-1.5 shadow-[inset_0_0_15px_rgba(0,0,0,0.9)]" id="terminal-console">
+          <div class="console-line system border-l-2 border-cyber-cyan pl-2">[System] Observability stream established. Monitoring local events...</div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- DECK 2: MASSIVE FULL-SCREEN COLLECTIVE LOGS TERMINAL -->
+  <main class="hidden flex-1 flex-col gap-4 p-6 max-w-[1920px] mx-auto w-full h-[calc(100vh-80px)]" id="deck-logs-container">
+    
+    <div class="bg-cyber-card border border-white/5 rounded-2xl p-5 flex flex-col gap-4 flex-1 overflow-hidden shadow-2xl relative">
+      
+      <!-- LOG FILTER BAR -->
+      <div class="flex items-center justify-between gap-4 border-b border-white/5 pb-3 flex-wrap">
+        <div class="flex items-center gap-3">
+          <span class="text-xs font-bold uppercase tracking-widest text-slate-400">Filter Log Stream:</span>
+          <div class="flex bg-black/40 rounded-lg p-1 border border-white/5 gap-1" id="logs-service-filters">
+            <button class="px-3 py-1 rounded text-xs font-bold transition-all bg-cyber-cyan/15 text-cyber-cyan border border-cyber-cyan/25" data-filter="all">ALL</button>
+            <button class="px-3 py-1 rounded text-xs font-bold transition-all text-slate-400 hover:text-slate-200" data-filter="gate">GATE</button>
+            <button class="px-3 py-1 rounded text-xs font-bold transition-all text-slate-400 hover:text-slate-200" data-filter="broker">BROKER</button>
+            <button class="px-3 py-1 rounded text-xs font-bold transition-all text-slate-400 hover:text-slate-200" data-filter="worker">WORKER</button>
+            <button class="px-3 py-1 rounded text-xs font-bold transition-all text-slate-400 hover:text-slate-200" data-filter="cannon">CANNON</button>
+            <button class="px-3 py-1 rounded text-xs font-bold transition-all text-slate-400 hover:text-slate-200" data-filter="probe">PROBE</button>
+            <button class="px-3 py-1 rounded text-xs font-bold transition-all text-slate-400 hover:text-slate-200" data-filter="infra">BACKING INFRA</button>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-4 flex-1 max-w-md">
+          <input type="text" id="logs-search-input" placeholder="Search logs (grep)..." class="w-full bg-black/60 border border-white/5 rounded-lg px-4 py-1.5 text-xs text-white outline-none focus:border-cyber-cyan font-mono">
+          
+          <label class="flex items-center gap-2 text-xs text-slate-400 select-none whitespace-nowrap cursor-pointer">
+            <input type="checkbox" id="logs-autoscroll" checked class="accent-cyber-cyan w-4 h-4">
+            <span>Auto-Scroll</span>
+          </label>
+
+          <button class="px-4 py-1.5 bg-white/5 border border-white/5 hover:bg-white/10 text-xs font-bold text-slate-200 rounded-lg whitespace-nowrap transition-all" id="btn-clear-logs">
+            🗑️ Clear Screen
+          </button>
+        </div>
+      </div>
+
+      <!-- LARGE MONOSPACE CONSOLE TERMINAL -->
+      <div class="flex-1 bg-black/85 border border-white/5 rounded-xl p-5 font-mono text-xs overflow-y-auto flex flex-col gap-2 shadow-[inset_0_0_20px_rgba(0,0,0,0.95)]" id="full-logs-console">
+        <div class="text-cyber-green opacity-45 select-none text-center py-4 border-b border-white/5 mb-2 border-dashed">
+          === CLUSTER COLLECTIVE TRACE LOG AGGREGATOR STARTED ===
         </div>
       </div>
 
@@ -325,7 +378,39 @@
       progressBar: document.getElementById('blast-progress-bar'),
       podGrid: document.getElementById('pod-monitor-grid'),
       console: document.getElementById('terminal-console'),
-      masterBanner: document.getElementById('master-engine-banner')
+      masterBanner: document.getElementById('master-engine-banner'),
+      // Tabs
+      tabMetrics: document.getElementById('tab-metrics'),
+      tabLogs: document.getElementById('tab-logs'),
+      deckMetrics: document.getElementById('deck-metrics-container'),
+      deckLogs: document.getElementById('deck-logs-container'),
+      // Logs console items
+      fullLogsConsole: document.getElementById('full-logs-console'),
+      logsSearchInput: document.getElementById('logs-search-input'),
+      logsAutoscroll: document.getElementById('logs-autoscroll'),
+      btnClearLogs: document.getElementById('btn-clear-logs'),
+      logsFiltersContainer: document.getElementById('logs-service-filters')
+    };
+
+    // Tabs toggle logic
+    elements.tabMetrics.onclick = () => {
+      elements.tabMetrics.className = "px-4 py-1.5 rounded-md text-xs font-semibold tracking-wider transition-all bg-cyber-cyan/15 text-cyber-cyan border border-cyber-cyan/20";
+      elements.tabLogs.className = "px-4 py-1.5 rounded-md text-xs font-semibold tracking-wider transition-all text-slate-400 hover:text-slate-200";
+      elements.deckMetrics.classList.remove('hidden');
+      elements.deckMetrics.classList.add('grid');
+      elements.deckLogs.classList.add('hidden');
+      elements.deckLogs.classList.remove('flex');
+    };
+
+    elements.tabLogs.onclick = () => {
+      elements.tabLogs.className = "px-4 py-1.5 rounded-md text-xs font-semibold tracking-wider transition-all bg-cyber-cyan/15 text-cyber-cyan border border-cyber-cyan/20";
+      elements.tabMetrics.className = "px-4 py-1.5 rounded-md text-xs font-semibold tracking-wider transition-all text-slate-400 hover:text-slate-200";
+      elements.deckMetrics.classList.add('hidden');
+      elements.deckMetrics.classList.remove('grid');
+      elements.deckLogs.classList.remove('hidden');
+      elements.deckLogs.classList.add('flex');
+      // Scroll to bottom on open
+      elements.fullLogsConsole.scrollTop = elements.fullLogsConsole.scrollHeight;
     };
 
     // Sliders UI Sync
@@ -367,7 +452,7 @@
       }
     }
 
-    // Chart configs
+    // Chart.js configurations
     const maxDataPoints = 30;
     const chartLabels = Array.from({length: maxDataPoints}, () => '');
 
@@ -511,7 +596,6 @@
           tempDiv.innerHTML = cardHtml.trim();
           elements.podGrid.appendChild(tempDiv.firstChild);
 
-          // Dedicated chart for this specific service
           const detailCtx = document.getElementById(`comp-detail-chart-${compName}`).getContext('2d');
           const cpuSparkData = Array(15).fill(0);
           const memSparkData = Array(15).fill(0);
@@ -583,7 +667,6 @@
           registryEntry.restartsEl.className = 'text-slate-200';
         }
 
-        // Push data points
         registryEntry.cpuData.shift();
         registryEntry.cpuData.push(tickCPU[compName]);
         registryEntry.memData.shift();
@@ -749,7 +832,6 @@
             tickReplicas[comp]++;
             tickRestarts[comp] += pod.restarts;
 
-            // Prioritize error state display
             if (pod.status.includes('CrashLoop') || pod.status.includes('Error') || pod.status.includes('OOM') || tickStatus[comp] === 'IDLE') {
               tickStatus[comp] = pod.status;
             }
@@ -789,6 +871,139 @@
       } catch (err) {
         console.error('SSE parsing error', err);
       }
+    };
+
+    // ----------------------------------------------------
+    // COLLECTIVE LOGSTREAM HANDLING (DECK 2)
+    // ----------------------------------------------------
+    const logsSse = new EventSource('/api/v1/logs/stream');
+    const logsBuffer = [];
+    let currentLogFilter = 'all';
+
+    const serviceBadgesColors = {
+      gate: 'bg-pink-500/10 border-pink-500/30 text-pink-400',
+      broker: 'bg-purple-500/10 border-purple-500/30 text-purple-400',
+      worker: 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400',
+      cannon: 'bg-red-500/10 border-red-500/30 text-red-400',
+      probe: 'bg-blue-500/10 border-blue-500/30 text-blue-400',
+      rabbitmq: 'bg-amber-500/10 border-amber-500/30 text-amber-400',
+      postgres: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400',
+      redis: 'bg-slate-500/10 border-slate-500/30 text-slate-400',
+      infra: 'bg-slate-500/10 border-slate-500/30 text-slate-400'
+    };
+
+    logsSse.onmessage = (event) => {
+      try {
+        const logObj = JSON.parse(event.data);
+        logObj.timestamp = new Date().toLocaleTimeString();
+        
+        logsBuffer.push(logObj);
+        // Cap buffer size
+        if (logsBuffer.length > 800) {
+          logsBuffer.shift();
+        }
+
+        renderLogLine(logObj);
+      } catch (err) {
+        console.error('Logs SSE parse failed', err);
+      }
+    };
+
+    function renderLogLine(logObj) {
+      // 1. Apply service filter
+      if (currentLogFilter !== 'all') {
+        if (currentLogFilter === 'infra') {
+          if (logObj.service !== 'postgres' && logObj.service !== 'redis' && logObj.service !== 'rabbitmq' && logObj.service !== 'infra') {
+            return;
+          }
+        } else if (logObj.service !== currentLogFilter) {
+          return;
+        }
+      }
+
+      // 2. Apply search query (grep)
+      const query = elements.logsSearchInput.value.trim().toLowerCase();
+      if (query !== '' && !logObj.message.toLowerCase().includes(query)) {
+        return;
+      }
+
+      // 3. Create DOM node
+      const row = document.createElement('div');
+      row.className = 'flex gap-3 hover:bg-white/5 py-0.5 px-2 rounded transition-colors';
+      
+      const badgeStyle = serviceBadgesColors[logObj.service] || serviceBadgesColors.infra;
+
+      row.innerHTML = `
+        <span class="text-slate-500 select-none whitespace-nowrap">${logObj.timestamp}</span>
+        <span class="text-[10px] font-bold px-2 py-0.5 rounded border whitespace-nowrap ${badgeStyle}">${logObj.service.toUpperCase()}</span>
+        <span class="text-slate-400 select-none text-[10px] whitespace-nowrap">${logObj.pod}</span>
+        <span class="text-slate-300 break-all">${escapeHtml(logObj.message)}</span>
+      `;
+
+      elements.fullLogsConsole.appendChild(row);
+
+      // Auto scroll
+      if (elements.logsAutoscroll.checked) {
+        elements.fullLogsConsole.scrollTop = elements.fullLogsConsole.scrollHeight;
+      }
+
+      // Prevent DOM overflow
+      while (elements.fullLogsConsole.childNodes.length > 800) {
+        elements.fullLogsConsole.removeChild(elements.fullLogsConsole.firstChild);
+      }
+    }
+
+    function escapeHtml(text) {
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // Filter clicks
+    elements.logsFiltersContainer.onclick = (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+
+      // Reset buttons
+      Array.from(elements.logsFiltersContainer.querySelectorAll('button')).forEach(b => {
+        b.className = "px-3 py-1 rounded text-xs font-bold transition-all text-slate-400 hover:text-slate-200";
+      });
+
+      btn.className = "px-3 py-1 rounded text-xs font-bold transition-all bg-cyber-cyan/15 text-cyber-cyan border border-cyber-cyan/25";
+      currentLogFilter = btn.dataset.filter;
+
+      // Re-render logs matching filter
+      rebuildLogsConsole();
+    };
+
+    // Rebuild logs console from buffer
+    function rebuildLogsConsole() {
+      elements.fullLogsConsole.innerHTML = `
+        <div class="text-cyber-green opacity-45 select-none text-center py-4 border-b border-white/5 mb-2 border-dashed">
+          === LOG FILTER COMPLETED (FILTER: ${currentLogFilter.toUpperCase()}) ===
+        </div>
+      `;
+      logsBuffer.forEach(logObj => {
+        renderLogLine(logObj);
+      });
+    }
+
+    // Search query input (instant grep filter)
+    elements.logsSearchInput.oninput = () => {
+      rebuildLogsConsole();
+    };
+
+    // Clear logs
+    elements.btnClearLogs.onclick = () => {
+      logsBuffer.length = 0; // Empty buffer
+      elements.fullLogsConsole.innerHTML = `
+        <div class="text-cyber-green opacity-45 select-none text-center py-4 border-b border-white/5 mb-2 border-dashed">
+          === CONSOLE CLEARED ===
+        </div>
+      `;
     };
   </script>
 </body>

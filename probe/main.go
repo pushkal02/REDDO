@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"crypto/tls"
 	"crypto/x509"
 	"embed"
@@ -18,12 +19,12 @@ import (
 var staticFS embed.FS
 
 type PodTelemetry struct {
-	Name      string `json:"name"`
-	Status    string `json:"status"`
-	Restarts  int    `json:"restarts"`
-	CPU       string `json:"cpu"`
-	Memory    string `json:"memory"`
-	Age       string `json:"age"`
+	Name     string `json:"name"`
+	Status   string `json:"status"`
+	Restarts int    `json:"restarts"`
+	CPU      string `json:"cpu"`
+	Memory   string `json:"memory"`
+	Age      string `json:"age"`
 }
 
 type TelemetryPayload struct {
@@ -50,16 +51,16 @@ func main() {
 		port = p
 	}
 
-	// Initialize K8s HTTP client using ServiceAccount credentials if available
 	initK8sClient()
 
 	mux := http.NewServeMux()
 	
-	// Server-Sent Events stream
+	// Server-Sent Events streams
 	mux.HandleFunc("GET /api/v1/telemetry/stream", handleSSEStream)
+	mux.HandleFunc("GET /api/v1/logs/stream", handleLogsStream)
 	
-	// Embed and serve dashboard static assets
-	mux.Handle("GET /static/", http.FileServer(http.FS(staticFS)))
+	// Serve static files with no-cache headers
+	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			http.NotFound(w, r)
@@ -71,6 +72,9 @@ func main() {
 			return
 		}
 		w.Header().Set("Content-Type", "text/html")
+		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+		w.Header().Set("Pragma", "no-cache")
+		w.Header().Set("Expires", "0")
 		w.Write(htmlBytes)
 	})
 
@@ -153,18 +157,159 @@ func handleSSEStream(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func handleLogsStream(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "Streaming unsupported", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("[Logs SSE] Client connected from %s", r.RemoteAddr)
+
+	logChan := make(chan string, 100)
+	done := make(chan struct{})
+	defer close(done)
+
+	tailingPods := make(map[string]bool)
+
+	// Dynamic pod discovery loop
+	go func() {
+		ticker := time.NewTicker(3 * time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-done:
+				return
+			case <-ticker.C:
+				if k8sToken == "" {
+					mockPayload, _ := json.Marshal(map[string]string{
+						"pod":     "gate-mock-12345",
+						"service": "gate",
+						"message": fmt.Sprintf("2026-07-07T00:00:00Z [INFO ] [gate] - Mock gateway log tick %d", time.Now().Unix()),
+					})
+					select {
+					case logChan <- string(mockPayload):
+					case <-done:
+						return
+					default:
+					}
+					continue
+				}
+
+				podsURL := "https://kubernetes.default.svc/api/v1/namespaces/reddo/pods"
+				req, err := http.NewRequest("GET", podsURL, nil)
+				if err != nil {
+					continue
+				}
+				req.Header.Set("Authorization", "Bearer "+k8sToken)
+				resp, err := k8sClient.Do(req)
+				if err != nil {
+					continue
+				}
+
+				var podList struct {
+					Items []struct {
+						Metadata struct {
+							Name string `json:"name"`
+						} `json:"metadata"`
+						Status struct {
+							Phase string `json:"phase"`
+						} `json:"status"`
+					} `json:"items"`
+				}
+
+				if json.NewDecoder(resp.Body).Decode(&podList) == nil {
+					for _, item := range podList.Items {
+						if item.Status.Phase == "Running" && !tailingPods[item.Metadata.Name] {
+							tailingPods[item.Metadata.Name] = true
+							go tailPodLogs(item.Metadata.Name, logChan, done)
+						}
+					}
+				}
+				resp.Body.Close()
+			}
+		}
+	}()
+
+	for {
+		select {
+		case <-r.Context().Done():
+			log.Printf("[Logs SSE] Client disconnected: %s", r.RemoteAddr)
+			return
+		case msg := <-logChan:
+			fmt.Fprintf(w, "data: %s\n\n", msg)
+			flusher.Flush()
+		}
+	}
+}
+
+func tailPodLogs(podName string, logChan chan string, done chan struct{}) {
+	url := fmt.Sprintf("https://kubernetes.default.svc/api/v1/namespaces/reddo/pods/%s/log?follow=true&tailLines=50", podName)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return
+	}
+	req.Header.Set("Authorization", "Bearer "+k8sToken)
+
+	resp, err := k8sClient.Do(req)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+
+	serviceName := "infra"
+	if strings.HasPrefix(podName, "gate") {
+		serviceName = "gate"
+	} else if strings.HasPrefix(podName, "broker") {
+		serviceName = "broker"
+	} else if strings.HasPrefix(podName, "worker") {
+		serviceName = "worker"
+	} else if strings.HasPrefix(podName, "cannon") {
+		serviceName = "cannon"
+	} else if strings.HasPrefix(podName, "probe") {
+		serviceName = "probe"
+	} else if strings.HasPrefix(podName, "rabbitmq") {
+		serviceName = "rabbitmq"
+	} else if strings.HasPrefix(podName, "postgres") {
+		serviceName = "postgres"
+	} else if strings.HasPrefix(podName, "redis") {
+		serviceName = "redis"
+	}
+
+	scanner := bufio.NewScanner(resp.Body)
+	for scanner.Scan() {
+		line := scanner.Text()
+		payload, err := json.Marshal(map[string]string{
+			"pod":     podName,
+			"service": serviceName,
+			"message": line,
+		})
+		if err != nil {
+			continue
+		}
+		select {
+		case logChan <- string(payload):
+		case <-done:
+			return
+		}
+	}
+}
+
 func scrapeTelemetry() TelemetryPayload {
 	payload := TelemetryPayload{
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
 	}
 
-	// 1. Scrape RabbitMQ Queue Depths
 	payload.RabbitMQ.JavaQueueDepth = getRabbitMQQueueDepth("java-tasks")
 	payload.RabbitMQ.NodeQueueDepth = getRabbitMQQueueDepth("node-tasks")
 
-	// 2. Scrape K8s Pod statuses & metrics if in cluster
 	if k8sToken == "" {
-		// Mock stats fallback for local development
 		payload.Pods = []PodTelemetry{
 			{Name: "gate-mock", Status: "Running", Restarts: 0, CPU: "12m", Memory: "32Mi", Age: "1h"},
 			{Name: "broker-mock", Status: "Running", Restarts: 0, CPU: "85m", Memory: "180Mi", Age: "1h"},
@@ -175,71 +320,66 @@ func scrapeTelemetry() TelemetryPayload {
 
 	podsMap := make(map[string]*PodTelemetry)
 
-	// Fetch Pod status list
 	podsURL := "https://kubernetes.default.svc/api/v1/namespaces/reddo/pods"
 	req, _ := http.NewRequest("GET", podsURL, nil)
 	req.Header.Set("Authorization", "Bearer "+k8sToken)
-
 	resp, err := k8sClient.Do(req)
-	if err == nil && resp.StatusCode == http.StatusOK {
-		var podList struct {
-			Items []struct {
-				Metadata struct {
-					Name              string    `json:"name"`
-					CreationTimestamp time.Time `json:"creationTimestamp"`
-				} `json:"metadata"`
-				Status struct {
-					Phase             string `json:"phase"`
-					ContainerStatuses []struct {
-						RestartCount int `json:"restartCount"`
-						State        struct {
-							Waiting *struct {
-								Reason string `json:"reason"`
-							} `json:"waiting"`
-						} `json:"state"`
-					} `json:"containerStatuses"`
-				} `json:"status"`
-			} `json:"items"`
-		}
-
-		if json.NewDecoder(resp.Body).Decode(&podList) == nil {
-			for _, item := range podList.Items {
-				status := item.Status.Phase
-				// Check for waiting CrashLoopBackOff or Error states
-				for _, cs := range item.Status.ContainerStatuses {
-					if cs.State.Waiting != nil && cs.State.Waiting.Reason != "" {
-						status = cs.State.Waiting.Reason
-					}
-				}
-
-				restarts := 0
-				if len(item.Status.ContainerStatuses) > 0 {
-					restarts = item.Status.ContainerStatuses[0].RestartCount
-				}
-
-				age := time.Since(item.Metadata.CreationTimestamp).Round(time.Second).String()
-
-				p := &PodTelemetry{
-					Name:     item.Metadata.Name,
-					Status:   status,
-					Restarts: restarts,
-					Age:      age,
-					CPU:      "0m",
-					Memory:   "0Mi",
-				}
-				podsMap[item.Metadata.Name] = p
-			}
-		}
-		resp.Body.Close()
+	if err != nil {
+		return payload
 	}
 
-	// Fetch Pod CPU/Memory metrics
+	var podList struct {
+		Items []struct {
+			Metadata struct {
+				Name              string    `json:"name"`
+				CreationTimestamp time.Time `json:"creationTimestamp"`
+			} `json:"metadata"`
+			Status struct {
+				Phase             string `json:"phase"`
+				ContainerStatuses []struct {
+					RestartCount int `json:"restartCount"`
+					State        struct {
+						Waiting *struct {
+							Reason string `json:"reason"`
+						} `json:"waiting"`
+					} `json:"state"`
+				} `json:"containerStatuses"`
+			} `json:"status"`
+		} `json:"items"`
+	}
+
+	if json.NewDecoder(resp.Body).Decode(&podList) == nil {
+		for _, item := range podList.Items {
+			restarts := 0
+			status := item.Status.Phase
+			
+			// Extract wait status if container is booting or crashing
+			for _, cs := range item.Status.ContainerStatuses {
+				restarts += cs.RestartCount
+				if cs.State.Waiting != nil && cs.State.Waiting.Reason != "" {
+					status = cs.State.Waiting.Reason
+				}
+			}
+
+			age := time.Since(item.Metadata.CreationTimestamp).Round(time.Second).String()
+			podsMap[item.Metadata.Name] = &PodTelemetry{
+				Name:     item.Metadata.Name,
+				Status:   status,
+				Restarts: restarts,
+				CPU:      "0m",
+				Memory:   "0Mi",
+				Age:      age,
+			}
+		}
+	}
+	resp.Body.Close()
+
+	// Scrape metrics-server API
 	metricsURL := "https://kubernetes.default.svc/apis/metrics.k8s.io/v1beta1/namespaces/reddo/pods"
 	req, _ = http.NewRequest("GET", metricsURL, nil)
 	req.Header.Set("Authorization", "Bearer "+k8sToken)
-
 	resp, err = k8sClient.Do(req)
-	if err == nil && resp.StatusCode == http.StatusOK {
+	if err == nil {
 		var metricsList struct {
 			Items []struct {
 				Metadata struct {
@@ -259,7 +399,6 @@ func scrapeTelemetry() TelemetryPayload {
 				if p, exists := podsMap[item.Metadata.Name]; exists {
 					var totalCPU int64
 					var totalMem int64
-					// Sum containers usages
 					for _, c := range item.Containers {
 						totalCPU += parseCPU(c.Usage.CPU)
 						totalMem += parseMem(c.Usage.Memory)
@@ -286,7 +425,6 @@ func getRabbitMQQueueDepth(queueName string) int {
 		return 0
 	}
 
-	// Extract username & password from raw RabbitMQ URL for basic auth
 	var username, password string
 	if strings.Contains(rabbitmqURL, "://") {
 		parts := strings.Split(rabbitmqURL, "://")
