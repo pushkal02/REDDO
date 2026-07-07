@@ -16,7 +16,7 @@ spec:
       name: cpu
       target:
         type: Utilization
-        averageUtilization: 30
+        averageUtilization: 75
   behavior:
     scaleDown:
       stabilizationWindowSeconds: 60
@@ -43,7 +43,7 @@ spec:
       name: cpu
       target:
         type: Utilization
-        averageUtilization: 30
+        averageUtilization: 75
   behavior:
     scaleDown:
       stabilizationWindowSeconds: 60
@@ -70,7 +70,7 @@ spec:
       name: cpu
       target:
         type: Utilization
-        averageUtilization: 30
+        averageUtilization: 75
   behavior:
     scaleDown:
       stabilizationWindowSeconds: 60

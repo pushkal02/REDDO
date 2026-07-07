@@ -120,7 +120,7 @@ Once running, the services can be accessed at the following host addresses:
 
 ### 4. Horizontal Pod Autoscaling (HPA)
 The platform is configured to horizontally autoscale microservice replica pods under high load.
-* **Autoscaling Metric Target**: **`30%` average CPU utilization** relative to the pod's requested resources.
+* **Autoscaling Metric Target**: **`75%` average CPU utilization** relative to the pod's requested resources.
 * **Autoscale Range**: Min replicas `1`, Max replicas `2` (by default, all services run exactly `1` pod replica when idle).
 * **Stabilization Cool-down**: Scale-down is customized to a **`60-second` stabilization window** (overriding the Kubernetes default of 5 minutes) to facilitate rapid, responsive cool-down test verification.
 * **Manifest Deployment**:
