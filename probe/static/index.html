@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>REDDO Chaos Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg-dark: #090a0f;
+      --bg-slate: #10131e;
+      --card-bg: rgba(20, 25, 40, 0.65);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --accent-cyan: #00f0ff;
+      --accent-purple: #bd00ff;
+      --accent-red: #ff0055;
+      --accent-green: #00ff66;
+      --accent-amber: #ffaa00;
+      --text-main: #f1f3f9;
+      --text-muted: #8a99ad;
+      --shadow-glow: 0 0 15px rgba(0, 240, 255, 0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(189, 0, 255, 0.1) 0px, transparent 50%),
+        radial-gradient(at 50% 0%, rgba(0, 240, 255, 0.08) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(255, 0, 85, 0.08) 0px, transparent 50%);
+      background-attachment: fixed;
+      font-family: 'Outfit', sans-serif;
+      color: var(--text-main);
+      min-height: 100vh;
+      overflow-x: hidden;
+      padding-bottom: 2rem;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.5rem 2rem;
+      background: rgba(9, 10, 15, 0.8);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-badge {
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: 2px;
+      background: linear-gradient(to right, #fff, var(--text-muted));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .system-status {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      font-size: 0.85rem;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.03);
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+    }
+
+    .indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--accent-green);
+      box-shadow: 0 0 8px var(--accent-green);
+    }
+
+    .indicator.inactive {
+      background-color: var(--accent-red);
+      box-shadow: 0 0 8px var(--accent-red);
+    }
+
+    .indicator.amber {
+      background-color: var(--accent-amber);
+      box-shadow: 0 0 8px var(--accent-amber);
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 360px 1fr 400px;
+      gap: 1.5rem;
+      padding: 1.5rem 2rem;
+      max-width: 1800px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 1200px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+    }
+
+    .card-title {
+      font-size: 1rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Form Fields */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .row-inputs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    input[type="number"], input[type="text"], select {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 8px 12px;
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 5px rgba(0, 240, 255, 0.2);
+    }
+
+    .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.02);
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+    }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      color: var(--text-main);
+    }
+
+    .slider-container {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+    }
+
+    .slider-val {
+      font-weight: 600;
+      color: var(--accent-cyan);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.1);
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--accent-cyan);
+      cursor: pointer;
+      box-shadow: 0 0 8px var(--accent-cyan);
+    }
+
+    /* Buttons */
+    .btn-fire {
+      background: linear-gradient(135deg, #ff0055, #990033);
+      color: #fff;
+      font-family: inherit;
+      font-weight: 700;
+      font-size: 1rem;
+      letter-spacing: 1px;
+      border: none;
+      border-radius: 8px;
+      padding: 12px;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(255, 0, 85, 0.3);
+      transition: all 0.2s;
+    }
+
+    .btn-fire:hover {
+      box-shadow: 0 0 18px rgba(255, 0, 85, 0.6);
+      transform: translateY(-1px);
+    }
+
+    .btn-fire:disabled {
+      background: rgba(255, 0, 85, 0.2);
+      color: rgba(255, 255, 255, 0.3);
+      box-shadow: none;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-stop {
+      background: linear-gradient(135deg, var(--accent-amber), #cc8800);
+      color: #fff;
+      font-family: inherit;
+      font-weight: 700;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      padding: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-stop:hover:not(:disabled) {
+      box-shadow: 0 0 18px rgba(255, 170, 0, 0.6);
+      transform: translateY(-1px);
+    }
+
+    .btn-stop:disabled {
+      background: rgba(255, 170, 0, 0.2);
+      color: rgba(255, 255, 255, 0.3);
+      cursor: not-allowed;
+    }
+
+    .btn-shuffle {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      color: #fff;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+
+    .btn-shuffle:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Blast Status Display */
+    .blast-info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      background: rgba(255, 255, 255, 0.02);
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+    }
+
+    .info-box {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .info-lbl {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .info-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .progress-bar-container {
+      width: 100%;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 5px;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(to right, var(--accent-cyan), var(--accent-purple));
+      transition: width 0.3s;
+    }
+
+    /* Chart Card */
+    .chart-container {
+      position: relative;
+      width: 100%;
+      height: 220px;
+    }
+
+    /* Pod Health List */
+    .pod-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    .pod-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .pod-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .pod-name {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .pod-status-badge {
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+      background: rgba(0, 255, 102, 0.1);
+      color: var(--accent-green);
+      border: 1px solid rgba(0, 255, 102, 0.2);
+    }
+
+    .pod-status-badge.error {
+      background: rgba(255, 0, 85, 0.1);
+      color: var(--accent-red);
+      border: 1px solid rgba(255, 0, 85, 0.2);
+      animation: pulse 1s infinite alternate;
+    }
+
+    .pod-status-badge.waiting {
+      background: rgba(255, 170, 0, 0.1);
+      color: var(--accent-amber);
+      border: 1px solid rgba(255, 170, 0, 0.2);
+    }
+
+    .pod-details {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .detail-val {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-main);
+      font-weight: bold;
+    }
+
+    /* Terminal Console */
+    .console-terminal {
+      background: #050608;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: #00ff66;
+      height: 250px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+    }
+
+    .console-line {
+      line-height: 1.3;
+      word-break: break-all;
+    }
+
+    .console-line.warn {
+      color: var(--accent-amber);
+    }
+
+    .console-line.error {
+      color: var(--accent-red);
+    }
+
+    .console-line.system {
+      color: var(--accent-cyan);
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 4px rgba(255, 0, 85, 0.3); }
+      100% { box-shadow: 0 0 12px rgba(255, 0, 85, 0.6); }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-container">
+      <div class="logo-badge"></div>
+      <h1>REDDO SAGA OBSERVER</h1>
+    </div>
+
+    <div class="system-status">
+      <div class="status-item">
+        <label for="cannon-url-input" style="margin-right: 5px;">CANNON API:</label>
+        <input type="text" id="cannon-url-input" value="http://localhost:8083" style="font-size: 0.75rem; padding: 2px 6px; width: 140px; border-radius: 4px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); color: #fff;">
+      </div>
+      <div class="status-item">
+        <div class="indicator" id="cannon-connection-indicator"></div>
+        <span>CANNON: <b id="cannon-connection-status">CONNECTED</b></span>
+      </div>
+      <div class="status-item">
+        <div class="indicator" id="stream-indicator"></div>
+        <span>TELEMETRY STREAM: <b id="stream-status">ACTIVE</b></span>
+      </div>
+    </div>
+  </header>
+
+  <div class="dashboard-grid">
+    
+    <!-- LEFT PANEL: CHAOS CONFIG PANEL -->
+    <div class="card">
+      <div class="card-title">Chaos Control Console 💥</div>
+      
+      <div class="row-inputs">
+        <div class="form-group">
+          <label for="total-requests">Total Workflows</label>
+          <input type="number" id="total-requests" value="200" min="1">
+        </div>
+        <div class="form-group">
+          <label for="concurrency">Concurrency</label>
+          <input type="number" id="concurrency" value="10" min="1">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Workflow Templates (Mix Load)</label>
+        <div class="checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="temp-valid" value="valid_dag" checked>
+            <span>Valid Workflow Flow</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" id="temp-rollback" value="saga_rollback" checked>
+            <span>Saga Rollback Test (fails task_a)</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" id="temp-comp" value="saga_compensation" checked>
+            <span>Saga Compensation Test (fails task_b)</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Fault Probability Sliders -->
+      <div class="slider-container">
+        <div class="slider-header">
+          <label for="zombie-hang">Zombie Hang (Unresolved promises)</label>
+          <span class="slider-val" id="zombie-hang-val">5%</span>
+        </div>
+        <input type="range" id="zombie-hang" min="0" max="100" value="5">
+      </div>
+
+      <div class="slider-container">
+        <div class="slider-header">
+          <label for="fatal-crash">Fatal Crash (Pod crash exits)</label>
+          <span class="slider-val" id="fatal-crash-val">2%</span>
+        </div>
+        <input type="range" id="fatal-crash" min="0" max="100" value="2">
+      </div>
+
+      <div class="slider-container">
+        <div class="slider-header">
+          <label for="business-fail">Business Fail (Saga Rollbacks)</label>
+          <span class="slider-val" id="business-fail-val">5%</span>
+        </div>
+        <input type="range" id="business-fail" min="0" max="100" value="5">
+      </div>
+
+      <div class="row-inputs">
+        <div class="form-group">
+          <label for="blast-seed">Shuffle Seed</label>
+          <input type="number" id="blast-seed" value="42561">
+        </div>
+        <div class="form-group" style="justify-content: flex-end;">
+          <button class="btn-shuffle" id="btn-shuffle-seed">🎲 Randomize</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="schedule-delay">Delayed Start Schedule (Seconds)</label>
+        <input type="number" id="schedule-delay" value="0" min="0">
+      </div>
+
+      <button class="btn-fire" id="btn-fire-cannon">FIRE CHAOS CANNON 💥</button>
+      <button class="btn-stop" id="btn-stop-blast" disabled>CANCEL BLAST 🛑</button>
+
+      <!-- Active Blast Status -->
+      <div class="blast-info-grid">
+        <div class="info-box">
+          <span class="info-lbl">BLAST STATUS</span>
+          <span class="info-val" id="blast-state">IDLE</span>
+        </div>
+        <div class="info-box">
+          <span class="info-lbl">SUCCESS RATE</span>
+          <span class="info-val" id="blast-success-rate">100.0%</span>
+        </div>
+        <div class="info-box" style="grid-column: span 2;">
+          <span class="info-lbl">PROGRESS</span>
+          <span class="info-val" id="blast-progress-txt">0 / 0</span>
+          <div class="progress-bar-container">
+            <div class="progress-bar" id="blast-progress-bar"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CENTER PANEL: MONITOR & METRICS -->
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+      <!-- Chart Card -->
+      <div class="card">
+        <div class="card-title">
+          <span>RabbitMQ Queue Metrics</span>
+          <span style="font-size: 0.8rem; text-transform: none; color: var(--accent-cyan);">Streamed Realtime</span>
+        </div>
+        <div class="chart-container">
+          <canvas id="queueChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Pod Health Grid -->
+      <div class="card" style="flex: 1;">
+        <div class="card-title">K8s Pod Resource Monitor</div>
+        <div class="pod-grid" id="pod-monitor-grid">
+          <!-- Populated dynamically -->
+          <div style="text-align: center; color: var(--text-muted); padding: 2rem;">Awaiting telemetry data stream...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL: SYSTEM TERMINAL LOGS -->
+    <div class="card">
+      <div class="card-title">System Event Terminal 📟</div>
+      <div class="console-terminal" id="terminal-console">
+        <div class="console-line system">[System] Logger console connected. Awaiting events...</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // Constants & Global state
+    const elements = {
+      cannonURL: document.getElementById('cannon-url-input'),
+      cannonIndicator: document.getElementById('cannon-connection-indicator'),
+      cannonConnText: document.getElementById('cannon-connection-status'),
+      streamIndicator: document.getElementById('stream-indicator'),
+      streamText: document.getElementById('stream-status'),
+      totalRequests: document.getElementById('total-requests'),
+      concurrency: document.getElementById('concurrency'),
+      tempValid: document.getElementById('temp-valid'),
+      tempRollback: document.getElementById('temp-rollback'),
+      tempComp: document.getElementById('temp-comp'),
+      zombieHang: document.getElementById('zombie-hang'),
+      zombieVal: document.getElementById('zombie-hang-val'),
+      fatalCrash: document.getElementById('fatal-crash'),
+      fatalVal: document.getElementById('fatal-crash-val'),
+      businessFail: document.getElementById('business-fail'),
+      businessVal: document.getElementById('business-fail-val'),
+      seed: document.getElementById('blast-seed'),
+      btnShuffle: document.getElementById('btn-shuffle-seed'),
+      scheduleDelay: document.getElementById('schedule-delay'),
+      btnFire: document.getElementById('btn-fire-cannon'),
+      btnStop: document.getElementById('btn-stop-blast'),
+      blastState: document.getElementById('blast-state'),
+      blastRate: document.getElementById('blast-success-rate'),
+      progressTxt: document.getElementById('blast-progress-txt'),
+      progressBar: document.getElementById('blast-progress-bar'),
+      podGrid: document.getElementById('pod-monitor-grid'),
+      console: document.getElementById('terminal-console')
+    };
+
+    // Sliders UI Sync
+    elements.zombieHang.oninput = (e) => elements.zombieVal.textContent = e.target.value + '%';
+    elements.fatalCrash.oninput = (e) => elements.fatalVal.textContent = e.target.value + '%';
+    elements.businessFail.oninput = (e) => elements.businessVal.textContent = e.target.value + '%';
+
+    // Seed Shuffle
+    elements.btnShuffle.onclick = () => {
+      elements.seed.value = Math.floor(Math.random() * 90000) + 10000;
+    };
+
+    // Logging helper
+    function logToConsole(message, type = 'info') {
+      const line = document.createElement('div');
+      line.className = `console-line ${type}`;
+      const ts = new Date().toLocaleTimeString();
+      line.textContent = `[${ts}] ${message}`;
+      elements.console.appendChild(line);
+      elements.console.scrollTop = elements.console.scrollHeight;
+    }
+
+    // Chart.js init
+    const chartCtx = document.getElementById('queueChart').getContext('2d');
+    const maxDataPoints = 30;
+    const chartLabels = Array.from({length: maxDataPoints}, () => '');
+    const javaQueueData = Array(maxDataPoints).fill(0);
+    const nodeQueueData = Array(maxDataPoints).fill(0);
+
+    const queueChart = new Chart(chartCtx, {
+      type: 'line',
+      data: {
+        labels: chartLabels,
+        datasets: [
+          {
+            label: 'Java Queue Depth',
+            data: javaQueueData,
+            borderColor: '#bd00ff',
+            backgroundColor: 'rgba(189, 0, 255, 0.05)',
+            borderWidth: 2,
+            tension: 0.3,
+            fill: true
+          },
+          {
+            label: 'Node Queue Depth',
+            data: nodeQueueData,
+            borderColor: '#00f0ff',
+            backgroundColor: 'rgba(0, 240, 255, 0.05)',
+            borderWidth: 2,
+            tension: 0.3,
+            fill: true
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            labels: { color: '#8a99ad', font: { family: 'Outfit' } }
+          }
+        },
+        scales: {
+          x: { display: false },
+          y: {
+            grid: { color: 'rgba(255, 255, 255, 0.04)' },
+            ticks: { color: '#8a99ad', font: { family: 'JetBrains Mono' }, stepSize: 1 }
+          }
+        }
+      }
+    });
+
+    // Update charts dynamically
+    function pushQueueMetrics(javaVal, nodeVal) {
+      javaQueueData.shift();
+      javaQueueData.push(javaVal);
+      nodeQueueData.shift();
+      nodeQueueData.push(nodeVal);
+      queueChart.update('none'); // Update without full redraw animation for performance
+    }
+
+    // Fire Cannon
+    elements.btnFire.onclick = async () => {
+      const templates = [];
+      if (elements.tempValid.checked) templates.push('valid_dag');
+      if (elements.tempRollback.checked) templates.push('saga_rollback');
+      if (elements.tempComp.checked) templates.push('saga_compensation');
+
+      if (templates.length === 0) {
+        alert('Please check at least one workflow template to trigger load!');
+        return;
+      }
+
+      const payload = {
+        total_requests: parseInt(elements.totalRequests.value),
+        concurrency: parseInt(elements.concurrency.value),
+        zombie_hang_probability: parseFloat(elements.zombieHang.value) / 100.0,
+        fatal_crash_probability: parseFloat(elements.fatalCrash.value) / 100.0,
+        business_fail_probability: parseFloat(elements.businessFail.value) / 100.0,
+        workflow_templates: templates,
+        seed: parseInt(elements.seed.value),
+        schedule_delay_seconds: parseInt(elements.scheduleDelay.value)
+      };
+
+      elements.btnFire.disabled = true;
+      logToConsole(`Fire instruction dispatched. Total requests: ${payload.total_requests}, Concurrency: ${payload.concurrency}`, 'system');
+
+      try {
+        const res = await fetch(`${elements.cannonURL.value}/api/v1/chaos/fire`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          throw new Error(`Server returned HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        logToConsole(`Cannon response: ${data.message} (status: ${data.status})`, 'system');
+        elements.btnStop.disabled = false;
+
+      } catch (err) {
+        logToConsole(`Dispatched Fire command failed: ${err.message}`, 'error');
+        elements.btnFire.disabled = false;
+      }
+    };
+
+    // Stop Blast
+    elements.btnStop.onclick = async () => {
+      logToConsole('Dispatched Cease Fire command...', 'system');
+      try {
+        const res = await fetch(`${elements.cannonURL.value}/api/v1/chaos/stop`, {
+          method: 'POST'
+        });
+        const data = await res.json();
+        logToConsole(`Cannon response: ${data.message}`, 'system');
+        elements.btnStop.disabled = true;
+        elements.btnFire.disabled = false;
+      } catch (err) {
+        logToConsole(`Cease fire request failed: ${err.message}`, 'error');
+      }
+    };
+
+    // Cannon Status Polling Loop
+    let statusInterval = setInterval(checkCannonStatus, 1000);
+
+    async function checkCannonStatus() {
+      try {
+        const res = await fetch(`${elements.cannonURL.value}/api/v1/chaos/status`);
+        if (!res.ok) throw new Error();
+
+        const status = await res.json();
+        
+        // Update connection status
+        elements.cannonIndicator.className = 'indicator';
+        elements.cannonConnText.textContent = 'CONNECTED';
+        elements.cannonConnText.style.color = 'var(--accent-green)';
+
+        // Update active blast information
+        elements.blastState.textContent = status.status;
+        if (status.status === 'RUNNING') {
+          elements.blastState.style.color = 'var(--accent-red)';
+          elements.btnFire.disabled = true;
+          elements.btnStop.disabled = false;
+        } else if (status.status === 'SCHEDULED') {
+          elements.blastState.style.color = 'var(--accent-amber)';
+          elements.blastState.textContent = `SCHEDULED (${status.schedule_remaining_seconds}s)`;
+          elements.btnFire.disabled = true;
+          elements.btnStop.disabled = false;
+        } else {
+          elements.blastState.style.color = '#fff';
+          elements.btnFire.disabled = false;
+          elements.btnStop.disabled = true;
+        }
+
+        // Update progress statistics
+        elements.progressTxt.textContent = `${status.progress} / ${status.total}`;
+        const pct = status.total > 0 ? (status.progress / status.total) * 100 : 0;
+        elements.progressBar.style.width = pct + '%';
+        elements.blastRate.textContent = (status.success_rate * 100).toFixed(1) + '%';
+
+      } catch (err) {
+        // Disconnected status
+        elements.cannonIndicator.className = 'indicator inactive';
+        elements.cannonConnText.textContent = 'DISCONNECTED';
+        elements.cannonConnText.style.color = 'var(--accent-red)';
+        elements.blastState.textContent = 'UNKNOWN';
+        elements.btnFire.disabled = true;
+        elements.btnStop.disabled = true;
+      }
+    }
+
+    // Telemetry SSE stream
+    const sse = new EventSource('/api/v1/telemetry/stream');
+
+    sse.onopen = () => {
+      elements.streamIndicator.className = 'indicator';
+      elements.streamText.textContent = 'ACTIVE';
+      elements.streamText.style.color = 'var(--accent-green)';
+      logToConsole('Established connection to Live Telemetry SSE stream.', 'system');
+    };
+
+    sse.onerror = (e) => {
+      elements.streamIndicator.className = 'indicator inactive';
+      elements.streamText.textContent = 'DISCONNECTED';
+      elements.streamText.style.color = 'var(--accent-red)';
+    };
+
+    sse.onmessage = (event) => {
+      try {
+        const telemetry = JSON.parse(event.data);
+        
+        // 1. Push Queue Depth metrics to line chart
+        pushQueueMetrics(telemetry.rabbitmq.java_queue_depth, telemetry.rabbitmq.node_queue_depth);
+
+        // 2. Render K8s Pod grids
+        renderPodsGrid(telemetry.pods);
+
+        // 3. Scan for container crashes or hangs to print to Terminal console logs
+        telemetry.pods.forEach(pod => {
+          if (pod.status.includes('CrashLoop') || pod.status.includes('Error')) {
+            logToConsole(`CRITICAL: Pod ${pod.name} in state ${pod.status}! (Restarts: ${pod.restarts})`, 'error');
+          }
+        });
+
+      } catch (err) {
+        console.error('Failed to parse SSE payload', err);
+      }
+    };
+
+    function renderPodsGrid(pods) {
+      if (!pods || pods.length === 0) {
+        elements.podGrid.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 2rem;">No active pods detected.</div>`;
+        return;
+      }
+
+      // Sort pods by name for stable UI rendering positions
+      pods.sort((a, b) => a.name.localeCompare(b.name));
+
+      elements.podGrid.innerHTML = pods.map(pod => {
+        const isError = pod.status.includes('Error') || pod.status.includes('Crash') || pod.status.includes('Fail');
+        const badgeClass = isError ? 'pod-status-badge error' : 'pod-status-badge';
+        return `
+          <div class="pod-card">
+            <div class="pod-header">
+              <span class="pod-name">${pod.name}</span>
+              <span class="${badgeClass}">${pod.status.toUpperCase()}</span>
+            </div>
+            <div class="pod-details">
+              <div>CPU: <span class="detail-val">${pod.cpu}</span></div>
+              <div>Memory: <span class="detail-val">${pod.memory}</span></div>
+              <div>Restarts: <span class="detail-val" style="color:${pod.restarts > 0 ? 'var(--accent-amber)' : 'inherit'}">${pod.restarts}</span></div>
+              <div>Age: <span class="detail-val">${pod.age}</span></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  </script>
+</body>
+</html>
