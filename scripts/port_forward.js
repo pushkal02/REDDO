@@ -11,7 +11,8 @@ const targets = [
     { name: 'statefulset/postgres', ports: ['5432:5432'] },
     { name: 'deployment/redis', ports: ['6379:6379'] },
     { name: 'deployment/rabbitmq', ports: ['5672:5672', '15672:15672'] },
-    { name: 'service/gate', ports: ['8080:8080'] }
+    { name: 'service/gate', ports: ['8080:8080'] },
+    { name: 'service/cannon', ports: ['8083:8083'] }
 ];
 
 // Check if namespace reddo has running pods first
