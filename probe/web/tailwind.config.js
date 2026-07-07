@@ -12,16 +12,19 @@ export default {
         mono: ['JetBrains Mono', 'monospace'],
       },
       colors: {
-        cyber: {
-          black: '#030407',
-          slate: '#090d16',
-          card: 'rgba(9, 13, 22, 0.75)',
-          cyan: '#00f0ff',
-          purple: '#bd00ff',
-          red: '#ff0055',
-          green: '#00ff66',
-          amber: '#ffaa00',
-          border: 'rgba(255, 255, 255, 0.05)',
+        lm: {
+          bg:      '#f0f2f8',
+          surface: '#ffffff',
+          card:    'rgba(255,255,255,0.85)',
+          border:  'rgba(0,0,0,0.07)',
+          muted:   '#6b7280',
+          text:    '#1e2030',
+          indigo:  '#6366f1',
+          blue:    '#3b82f6',
+          red:     '#dc2626',
+          green:   '#16a34a',
+          amber:   '#d97706',
+          purple:  '#9333ea',
         }
       }
     },
