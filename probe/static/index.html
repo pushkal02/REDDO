@@ -12,7 +12,7 @@
     :root {
       --bg-dark: #07080b;
       --bg-slate: #0d1017;
-      --card-bg: rgba(13, 17, 28, 0.7);
+      --card-bg: rgba(13, 17, 28, 0.75);
       --border-color: rgba(255, 255, 255, 0.05);
       --accent-cyan: #00f0ff;
       --accent-purple: #bd00ff;
@@ -116,13 +116,6 @@
       animation: pulse-border 1.5s infinite alternate;
     }
 
-    .engine-status-banner.amber {
-      background: rgba(255, 170, 0, 0.08);
-      border: 1px solid rgba(255, 170, 0, 0.25);
-      color: var(--accent-amber);
-      box-shadow: 0 0 15px rgba(255, 170, 0, 0.15);
-    }
-
     .system-status {
       display: flex;
       align-items: center;
@@ -160,7 +153,7 @@
 
     .dashboard-grid {
       display: grid;
-      grid-template-columns: 380px 1fr 420px;
+      grid-template-columns: 380px 1fr 440px;
       gap: 1.5rem;
       padding: 1.5rem 2rem;
       max-width: 1900px;
@@ -235,7 +228,7 @@
       border-radius: 8px;
       padding: 10px 14px;
       color: #fff;
-      font-family: 'JetBrains Mono', monospace;
+      font-family: 'Outfit', sans-serif;
       font-size: 0.9rem;
       outline: none;
       transition: all 0.2s;
@@ -250,7 +243,7 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
-      background: rgba(0, 0, 0, 0.2);
+      background: rgba(0, 0, 0, 0.25);
       padding: 12px;
       border-radius: 8px;
       border: 1px solid var(--border-color);
@@ -414,7 +407,7 @@
       border-radius: 5px;
       overflow: hidden;
       margin-top: 6px;
-      border: 1px solid rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-color);
     }
 
     .progress-bar {
@@ -439,15 +432,15 @@
     .chart-container {
       position: relative;
       width: 100%;
-      height: 200px;
+      height: 190px;
     }
 
-    /* Pod status grid list */
+    /* Component Grid */
     .pod-grid {
       display: grid;
       grid-template-columns: 1fr;
-      gap: 10px;
-      max-height: 480px;
+      gap: 12px;
+      max-height: 520px;
       overflow-y: auto;
       padding-right: 4px;
     }
@@ -467,17 +460,18 @@
     .pod-card {
       background: rgba(255, 255, 255, 0.02);
       border: 1px solid var(--border-color);
-      border-radius: 10px;
-      padding: 12px;
+      border-radius: 12px;
+      padding: 14px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 10px;
       transition: all 0.2s;
     }
 
     .pod-card:hover {
       background: rgba(255, 255, 255, 0.04);
       border-color: rgba(0, 240, 255, 0.15);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     }
 
     .pod-header {
@@ -487,8 +481,9 @@
     }
 
     .pod-name {
-      font-size: 0.9rem;
-      font-weight: 700;
+      font-size: 0.95rem;
+      font-weight: 800;
+      letter-spacing: 0.5px;
       color: var(--text-main);
     }
 
@@ -537,7 +532,7 @@
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.78rem;
       color: #00ff66;
-      height: 240px;
+      height: 220px;
       overflow-y: auto;
       display: flex;
       flex-direction: column;
@@ -697,7 +692,7 @@
       </div>
     </div>
 
-    <!-- CENTER COLUMN: MASTER METRICS CHARTS -->
+    <!-- CENTER COLUMN: COMBINED MASTER CHARTS -->
     <div class="telemetry-charts-panel">
       <!-- Queue depth chart -->
       <div class="card chart-card">
@@ -713,7 +708,7 @@
       <!-- CPU chart -->
       <div class="card chart-card">
         <div class="card-title">
-          <span>Deployment CPU Trends (m)</span>
+          <span>Combined CPU Utilization Trend (m)</span>
           <span style="font-size: 0.75rem; text-transform: none; color: var(--accent-purple);">Microservice Metrics</span>
         </div>
         <div class="chart-container">
@@ -724,7 +719,7 @@
       <!-- Memory chart -->
       <div class="card chart-card">
         <div class="card-title">
-          <span>Deployment Memory Trends (Mi)</span>
+          <span>Combined Memory Utilization Trend (Mi)</span>
           <span style="font-size: 0.75rem; text-transform: none; color: #ff00ff;">Microservice Footprints</span>
         </div>
         <div class="chart-container">
@@ -733,12 +728,12 @@
       </div>
     </div>
 
-    <!-- RIGHT COLUMN: SYSTEM EVENT LOGS & POD HEALTH -->
+    <!-- RIGHT COLUMN: SEPARATE CHARTS & LIVE EVENT LOGS -->
     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
       <div class="card" style="flex: 1;">
-        <div class="card-title">K8s Pod Resource Grid</div>
+        <div class="card-title">K8s Deployment Monitor (Separate Scales)</div>
         <div class="pod-grid" id="pod-monitor-grid">
-          <div style="text-align: center; color: var(--text-muted); padding: 2rem;">Awaiting telemetry data stream...</div>
+          <!-- Dynamic cards with individual sparkline canvas items generated dynamically -->
         </div>
       </div>
 
@@ -803,8 +798,7 @@
       elements.console.appendChild(line);
       elements.console.scrollTop = elements.console.scrollHeight;
 
-      // Clean up old log lines to prevent DOM bloat
-      while (elements.console.childNodes.length > 100) {
+      while (elements.console.childNodes.length > 80) {
         elements.console.removeChild(elements.console.firstChild);
       }
     }
@@ -825,7 +819,10 @@
       redis: '#64748b'
     };
 
-    // 1. Queue depth chart
+    // Global component registry caching sparkline instances
+    const componentRegistry = {};
+
+    // 1. Combined Queue depth chart
     const queueChartCtx = document.getElementById('queueChart').getContext('2d');
     const javaQueueData = Array(maxDataPoints).fill(0);
     const nodeQueueData = Array(maxDataPoints).fill(0);
@@ -841,7 +838,7 @@
       options: getCommonChartOptions()
     });
 
-    // 2. Pod CPU chart
+    // 2. Combined CPU chart
     const cpuChartCtx = document.getElementById('cpuChart').getContext('2d');
     const cpuDatasets = components.map(comp => ({
       label: comp,
@@ -857,7 +854,7 @@
       options: getCommonChartOptions()
     });
 
-    // 3. Pod Memory chart
+    // 3. Combined Memory chart
     const memChartCtx = document.getElementById('memChart').getContext('2d');
     const memDatasets = components.map(comp => ({
       label: comp,
@@ -880,14 +877,14 @@
         plugins: {
           legend: {
             position: 'top',
-            labels: { color: '#8a99ad', boxWidth: 10, font: { family: 'Outfit', size: 10 } }
+            labels: { color: '#8a99ad', boxWidth: 8, font: { family: 'Outfit', size: 9 } }
           }
         },
         scales: {
           x: { display: false },
           y: {
             grid: { color: 'rgba(255, 255, 255, 0.03)' },
-            ticks: { color: '#8a99ad', font: { family: 'JetBrains Mono', size: 10 } }
+            ticks: { color: '#8a99ad', font: { family: 'JetBrains Mono', size: 9 } }
           }
         }
       };
@@ -905,30 +902,14 @@
       return null;
     }
 
-    // Update Master Trends Chart
-    function updateMasterCharts(telemetry) {
+    // Update Master combined charts
+    function updateMasterCharts(tickCPU, tickMem, telemetry) {
       // 1. Update queue depth chart
       javaQueueData.shift();
       javaQueueData.push(telemetry.rabbitmq.java_queue_depth);
       nodeQueueData.shift();
       nodeQueueData.push(telemetry.rabbitmq.node_queue_depth);
       queueChart.update('none');
-
-      // Reset values for this tick to aggregate multi-replica pods if any
-      const tickCPU = {};
-      const tickMem = {};
-      components.forEach(c => { tickCPU[c] = 0; tickMem[c] = 0; });
-
-      telemetry.pods.forEach(pod => {
-        const comp = getComponentFromPodName(pod.name);
-        if (comp) {
-          // Parse values (remove 'm' and 'Mi')
-          const cpuVal = parseInt(pod.cpu.replace('m', '')) || 0;
-          const memVal = parseInt(pod.memory.replace('Mi', '')) || 0;
-          tickCPU[comp] += cpuVal;
-          tickMem[comp] += memVal;
-        }
-      });
 
       // 2. Update CPU Chart
       cpuChart.data.datasets.forEach(ds => {
@@ -943,6 +924,109 @@
         ds.data.push(tickMem[ds.label]);
       });
       memChart.update('none');
+    }
+
+    // Update dynamic pods cards with separate sparkline graphs
+    function updateComponentRegistry(tickCPU, tickMem, tickStatus, tickRestarts, tickReplicas, tickAge) {
+      components.forEach(compName => {
+        let registryEntry = componentRegistry[compName];
+
+        // Create DOM nodes dynamically if not exists
+        if (!registryEntry) {
+          const cardHtml = `
+            <div class="pod-card" id="comp-card-${compName}">
+              <div class="pod-header">
+                <span class="pod-name">${compName.toUpperCase()}</span>
+                <span class="pod-status-badge" id="comp-status-${compName}">IDLE</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; gap: 15px;">
+                <div class="pod-details" style="display: flex; flex-direction: column; gap: 4px; font-size: 0.78rem; flex: 1;">
+                  <div>CPU: <span class="detail-val" id="comp-cpu-${compName}">0m</span></div>
+                  <div>Mem: <span class="detail-val" id="comp-mem-${compName}">0Mi</span></div>
+                  <div>Replicas: <span class="detail-val" id="comp-replicas-${compName}">0</span></div>
+                  <div>Restarts: <span class="detail-val" id="comp-restarts-${compName}">0</span></div>
+                </div>
+                <div style="width: 140px; height: 50px; position: relative;">
+                  <canvas id="comp-sparkline-${compName}"></canvas>
+                </div>
+              </div>
+            </div>
+          `;
+
+          // Append to Grid Container
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = cardHtml.trim();
+          elements.podGrid.appendChild(tempDiv.firstChild);
+
+          // Get sparkline canvas context
+          const sparkCtx = document.getElementById(`comp-sparkline-${compName}`).getContext('2d');
+          const cpuSparkData = Array(15).fill(0);
+          const memSparkData = Array(15).fill(0);
+
+          const sparkChart = new Chart(sparkCtx, {
+            type: 'line',
+            data: {
+              labels: Array.from({length: 15}, () => ''),
+              datasets: [
+                { data: cpuSparkData, borderColor: varColor(componentColors[compName], 0.9), borderWidth: 2, tension: 0.3, fill: false, yAxisID: 'yCPU' },
+                { data: memSparkData, borderColor: '#a855f7', borderWidth: 1.5, tension: 0.3, borderDash: [2, 2], fill: false, yAxisID: 'yMem' }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false }, tooltip: { enabled: false } },
+              scales: { 
+                x: { display: false }, 
+                yCPU: { display: false, type: 'linear', position: 'left' },
+                yMem: { display: false, type: 'linear', position: 'right' }
+              },
+              elements: { point: { radius: 0 } }
+            }
+          });
+
+          registryEntry = {
+            chart: sparkChart,
+            cpuData: cpuSparkData,
+            memData: memSparkData,
+            statusEl: document.getElementById(`comp-status-${compName}`),
+            cpuEl: document.getElementById(`comp-cpu-${compName}`),
+            memEl: document.getElementById(`comp-mem-${compName}`),
+            replicasEl: document.getElementById(`comp-replicas-${compName}`),
+            restartsEl: document.getElementById(`comp-restarts-${compName}`)
+          };
+
+          componentRegistry[compName] = registryEntry;
+        }
+
+        // Update cached DOM elements
+        const status = tickStatus[compName] || 'IDLE';
+        registryEntry.statusEl.textContent = status.toUpperCase();
+        if (status.includes('Error') || status.includes('Crash') || status.includes('BackOff')) {
+          registryEntry.statusEl.className = 'pod-status-badge error';
+        } else {
+          registryEntry.statusEl.className = 'pod-status-badge';
+        }
+
+        registryEntry.cpuEl.textContent = `${tickCPU[compName]}m`;
+        registryEntry.memEl.textContent = `${tickMem[compName]}Mi`;
+        registryEntry.replicasEl.textContent = tickReplicas[compName];
+        registryEntry.restartsEl.textContent = tickRestarts[compName];
+        if (tickRestarts[compName] > 0) {
+          registryEntry.restartsEl.style.color = 'var(--accent-amber)';
+        }
+
+        // Update separate sparkline chart metrics at its own relative scale
+        registryEntry.cpuData.shift();
+        registryEntry.cpuData.push(tickCPU[compName]);
+        registryEntry.memData.shift();
+        registryEntry.memData.push(tickMem[compName]);
+        registryEntry.chart.update('none');
+      });
+    }
+
+    function varColor(hex, alpha) {
+      return hex; // Helper to pass custom colors
     }
 
     // Fire Cannon
@@ -1037,7 +1121,6 @@
         elements.progressTxt.textContent = `${status.progress} / ${status.total}`;
         const pct = status.total > 0 ? (status.progress / status.total) * 100 : 0;
         elements.progressBar.style.width = pct + '%';
-        elements.sidebarPct = pct;
         elements.blastRate.textContent = (status.success_rate * 100).toFixed(1) + '%';
 
       } catch (err) {
@@ -1049,6 +1132,9 @@
         elements.btnStop.disabled = true;
       }
     }
+
+    // Clear initial DOM loading message once stream begins
+    let hasLoadedFirstTelemetry = false;
 
     // Telemetry SSE stream
     const sse = new EventSource('/api/v1/telemetry/stream');
@@ -1069,12 +1155,50 @@
     sse.onmessage = (event) => {
       try {
         const telemetry = JSON.parse(event.data);
-        
-        // 1. Push metrics to multi-line charts
-        updateMasterCharts(telemetry);
 
-        // 2. Render Pod list grid
-        renderPodsGrid(telemetry.pods);
+        if (!hasLoadedFirstTelemetry) {
+          elements.podGrid.innerHTML = ''; // Clear fallback card
+          hasLoadedFirstTelemetry = true;
+        }
+        
+        // Aggregate multi-replica metrics
+        const tickCPU = {};
+        const tickMem = {};
+        const tickStatus = {};
+        const tickRestarts = {};
+        const tickReplicas = {};
+
+        components.forEach(c => {
+          tickCPU[c] = 0;
+          tickMem[c] = 0;
+          tickStatus[c] = 'IDLE';
+          tickRestarts[c] = 0;
+          tickReplicas[c] = 0;
+        });
+
+        telemetry.pods.forEach(pod => {
+          const comp = getComponentFromPodName(pod.name);
+          if (comp) {
+            const cpuVal = parseInt(pod.cpu.replace('m', '')) || 0;
+            const memVal = parseInt(pod.memory.replace('Mi', '')) || 0;
+            
+            tickCPU[comp] += cpuVal;
+            tickMem[comp] += memVal;
+            tickReplicas[comp]++;
+            tickRestarts[comp] += pod.restarts;
+
+            // Prioritize error state logging
+            if (pod.status.includes('CrashLoop') || pod.status.includes('Error') || pod.status.includes('OOM') || tickStatus[comp] === 'IDLE') {
+              tickStatus[comp] = pod.status;
+            }
+          }
+        });
+
+        // 1. Update Combined Master Trends
+        updateMasterCharts(tickCPU, tickMem, telemetry);
+
+        // 2. Update dynamic separate cards with sparkline charts
+        updateComponentRegistry(tickCPU, tickMem, tickStatus, tickRestarts, tickReplicas);
 
         // 3. Scan for incidents or logs to write to log console
         let engineCompromised = false;
@@ -1088,7 +1212,7 @@
           }
         });
 
-        // 4. Update Engine banner state
+        // 4. Update Engine status HUD banner
         if (engineCompromised) {
           elements.masterBanner.textContent = 'SAGA COORDINATOR IN DISTRESS';
           elements.masterBanner.className = 'engine-status-banner compromised';
@@ -1104,34 +1228,6 @@
         console.error('SSE parsing error', err);
       }
     };
-
-    function renderPodsGrid(pods) {
-      if (!pods || pods.length === 0) {
-        elements.podGrid.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 2rem;">No active pods detected.</div>`;
-        return;
-      }
-
-      pods.sort((a, b) => a.name.localeCompare(b.name));
-
-      elements.podGrid.innerHTML = pods.map(pod => {
-        const isError = pod.status.includes('Error') || pod.status.includes('Crash') || pod.status.includes('Terminating');
-        const badgeClass = isError ? 'pod-status-badge error' : 'pod-status-badge';
-        return `
-          <div class="pod-card">
-            <div class="pod-header">
-              <span class="pod-name">${pod.name}</span>
-              <span class="${badgeClass}">${pod.status.toUpperCase()}</span>
-            </div>
-            <div class="pod-details">
-              <div>CPU: <span class="detail-val">${pod.cpu}</span></div>
-              <div>Mem: <span class="detail-val">${pod.memory}</span></div>
-              <div>Restarts: <span class="detail-val" style="color:${pod.restarts > 0 ? 'var(--accent-amber)' : 'inherit'}">${pod.restarts}</span></div>
-              <div>Age: <span class="detail-val">${pod.age}</span></div>
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
   </script>
 </body>
 </html>
