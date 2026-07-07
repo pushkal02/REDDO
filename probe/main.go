@@ -59,23 +59,41 @@ func main() {
 	mux.HandleFunc("GET /api/v1/telemetry/stream", handleSSEStream)
 	mux.HandleFunc("GET /api/v1/logs/stream", handleLogsStream)
 	
-	// Serve static files with no-cache headers
-	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
+	// Serve embedded React SPA files
 	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/" {
-			http.NotFound(w, r)
-			return
+		path := r.URL.Path
+		if path == "/" {
+			path = "/index.html"
 		}
-		htmlBytes, err := staticFS.ReadFile("static/index.html")
+		
+		filePath := "static" + path
+		fileBytes, err := staticFS.ReadFile(filePath)
 		if err != nil {
-			http.Error(w, "Dashboard file not found", http.StatusNotFound)
+			// Fallback to index.html for React SPA Router support
+			fileBytes, err = staticFS.ReadFile("static/index.html")
+			if err != nil {
+				http.Error(w, "Not Found", http.StatusNotFound)
+				return
+			}
+			w.Header().Set("Content-Type", "text/html")
+			w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+			w.Write(fileBytes)
 			return
 		}
-		w.Header().Set("Content-Type", "text/html")
-		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
-		w.Header().Set("Pragma", "no-cache")
-		w.Header().Set("Expires", "0")
-		w.Write(htmlBytes)
+
+		// Set explicit MIME content types
+		if strings.HasSuffix(path, ".html") {
+			w.Header().Set("Content-Type", "text/html")
+			w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+		} else if strings.HasSuffix(path, ".css") {
+			w.Header().Set("Content-Type", "text/css")
+		} else if strings.HasSuffix(path, ".js") {
+			w.Header().Set("Content-Type", "application/javascript")
+		} else if strings.HasSuffix(path, ".svg") {
+			w.Header().Set("Content-Type", "image/svg+xml")
+		}
+		
+		w.Write(fileBytes)
 	})
 
 	log.Printf("[Telemetry Observer] Server starting on port %s...", port)
@@ -353,7 +371,6 @@ func scrapeTelemetry() TelemetryPayload {
 			restarts := 0
 			status := item.Status.Phase
 			
-			// Extract wait status if container is booting or crashing
 			for _, cs := range item.Status.ContainerStatuses {
 				restarts += cs.RestartCount
 				if cs.State.Waiting != nil && cs.State.Waiting.Reason != "" {
@@ -374,7 +391,6 @@ func scrapeTelemetry() TelemetryPayload {
 	}
 	resp.Body.Close()
 
-	// Scrape metrics-server API
 	metricsURL := "https://kubernetes.default.svc/apis/metrics.k8s.io/v1beta1/namespaces/reddo/pods"
 	req, _ = http.NewRequest("GET", metricsURL, nil)
 	req.Header.Set("Authorization", "Bearer "+k8sToken)

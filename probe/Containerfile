@@ -1,15 +1,29 @@
-# Stage 1: Build stage
-FROM golang:1.26-alpine AS builder
+# Stage 1: Build the React frontend
+FROM node:24-alpine AS node-builder
+WORKDIR /web
 
+# Install dependencies
+COPY web/package*.json ./
+RUN npm ci
+
+# Copy React project and compile build
+COPY web/ .
+RUN npm run build
+
+# Stage 2: Build the Go Telemetry Observer
+FROM golang:1.26-alpine AS builder
 WORKDIR /src
 
 COPY go.mod ./
 RUN go mod download
 
+# Copy Go code and static build outputs from Stage 1
 COPY . .
+COPY --from=node-builder /web/dist ./static
+
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /app/probe main.go
 
-# Stage 2: Runtime stage
+# Stage 3: Runtime stage
 FROM alpine:3.20
 
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
