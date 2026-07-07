@@ -3,25 +3,26 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>REDDO Chaos Dashboard</title>
+  <title>REDDO Saga Chaos Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
-      --bg-dark: #090a0f;
-      --bg-slate: #10131e;
-      --card-bg: rgba(20, 25, 40, 0.65);
-      --border-color: rgba(255, 255, 255, 0.08);
+      --bg-dark: #07080b;
+      --bg-slate: #0d1017;
+      --card-bg: rgba(13, 17, 28, 0.7);
+      --border-color: rgba(255, 255, 255, 0.05);
       --accent-cyan: #00f0ff;
       --accent-purple: #bd00ff;
       --accent-red: #ff0055;
       --accent-green: #00ff66;
       --accent-amber: #ffaa00;
       --text-main: #f1f3f9;
-      --text-muted: #8a99ad;
-      --shadow-glow: 0 0 15px rgba(0, 240, 255, 0.25);
+      --text-muted: #6e7d95;
+      --glow-cyan: 0 0 15px rgba(0, 240, 255, 0.2);
+      --glow-red: 0 0 15px rgba(255, 0, 85, 0.2);
     }
 
     * {
@@ -33,9 +34,9 @@
     body {
       background-color: var(--bg-dark);
       background-image: 
-        radial-gradient(at 0% 0%, rgba(189, 0, 255, 0.1) 0px, transparent 50%),
-        radial-gradient(at 50% 0%, rgba(0, 240, 255, 0.08) 0px, transparent 50%),
-        radial-gradient(at 100% 100%, rgba(255, 0, 85, 0.08) 0px, transparent 50%);
+        radial-gradient(at 10% 10%, rgba(189, 0, 255, 0.08) 0px, transparent 50%),
+        radial-gradient(at 50% 10%, rgba(0, 240, 255, 0.06) 0px, transparent 50%),
+        radial-gradient(at 90% 90%, rgba(255, 0, 85, 0.06) 0px, transparent 50%);
       background-attachment: fixed;
       font-family: 'Outfit', sans-serif;
       color: var(--text-main);
@@ -48,9 +49,9 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 1.5rem 2rem;
-      background: rgba(9, 10, 15, 0.8);
-      backdrop-filter: blur(10px);
+      padding: 1rem 2rem;
+      background: rgba(7, 8, 11, 0.85);
+      backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--border-color);
       position: sticky;
       top: 0;
@@ -60,40 +61,82 @@
     .logo-container {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
     }
 
     .logo-badge {
       background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
-      width: 32px;
-      height: 32px;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+      position: relative;
+    }
+
+    .logo-badge::after {
+      content: '';
+      position: absolute;
+      top: 25%;
+      left: 25%;
+      width: 50%;
+      height: 50%;
+      background: #000;
+      border-radius: 50%;
     }
 
     h1 {
-      font-size: 1.5rem;
+      font-size: 1.6rem;
       font-weight: 800;
-      letter-spacing: 2px;
-      background: linear-gradient(to right, #fff, var(--text-muted));
+      letter-spacing: 3px;
+      background: linear-gradient(to right, #ffffff, #a3b3cc);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
+    }
+
+    /* Master Engine Status Banner */
+    .engine-status-banner {
+      background: rgba(0, 255, 102, 0.06);
+      border: 1px solid rgba(0, 255, 102, 0.15);
+      color: var(--accent-green);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: bold;
+      padding: 6px 20px;
+      border-radius: 20px;
+      letter-spacing: 1px;
+      box-shadow: 0 0 10px rgba(0, 255, 102, 0.05);
+      transition: all 0.3s;
+    }
+
+    .engine-status-banner.compromised {
+      background: rgba(255, 0, 85, 0.08);
+      border: 1px solid rgba(255, 0, 85, 0.25);
+      color: var(--accent-red);
+      box-shadow: 0 0 15px rgba(255, 0, 85, 0.15);
+      animation: pulse-border 1.5s infinite alternate;
+    }
+
+    .engine-status-banner.amber {
+      background: rgba(255, 170, 0, 0.08);
+      border: 1px solid rgba(255, 170, 0, 0.25);
+      color: var(--accent-amber);
+      box-shadow: 0 0 15px rgba(255, 170, 0, 0.15);
     }
 
     .system-status {
       display: flex;
       align-items: center;
       gap: 15px;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
     }
 
     .status-item {
       display: flex;
       align-items: center;
       gap: 6px;
-      background: rgba(255, 255, 255, 0.03);
-      padding: 4px 10px;
-      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.02);
+      padding: 6px 12px;
+      border-radius: 8px;
       border: 1px solid var(--border-color);
     }
 
@@ -117,14 +160,14 @@
 
     .dashboard-grid {
       display: grid;
-      grid-template-columns: 360px 1fr 400px;
+      grid-template-columns: 380px 1fr 420px;
       gap: 1.5rem;
       padding: 1.5rem 2rem;
-      max-width: 1800px;
+      max-width: 1900px;
       margin: 0 auto;
     }
 
-    @media (max-width: 1200px) {
+    @media (max-width: 1400px) {
       .dashboard-grid {
         grid-template-columns: 1fr;
       }
@@ -132,24 +175,36 @@
 
     .card {
       background: var(--card-bg);
-      backdrop-filter: blur(16px);
-      border-radius: 12px;
+      backdrop-filter: blur(20px);
+      border-radius: 16px;
       border: 1px solid var(--border-color);
-      padding: 1.25rem;
+      padding: 1.5rem;
       display: flex;
       flex-direction: column;
-      gap: 1rem;
-      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+      gap: 1.2rem;
+      box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.45);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
     }
 
     .card-title {
       font-size: 1rem;
-      font-weight: 600;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 1px;
+      letter-spacing: 1.5px;
       color: var(--text-muted);
       border-bottom: 1px solid var(--border-color);
-      padding-bottom: 0.5rem;
+      padding-bottom: 0.6rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -165,39 +220,39 @@
     label {
       font-size: 0.85rem;
       color: var(--text-muted);
-      font-weight: 500;
+      font-weight: 600;
     }
 
     .row-inputs {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px;
+      gap: 12px;
     }
 
-    input[type="number"], input[type="text"], select {
-      background: rgba(0, 0, 0, 0.4);
+    input[type="number"], input[type="text"] {
+      background: rgba(0, 0, 0, 0.5);
       border: 1px solid var(--border-color);
-      border-radius: 6px;
-      padding: 8px 12px;
+      border-radius: 8px;
+      padding: 10px 14px;
       color: #fff;
-      font-family: inherit;
+      font-family: 'JetBrains Mono', monospace;
       font-size: 0.9rem;
       outline: none;
-      transition: border-color 0.2s;
+      transition: all 0.2s;
     }
 
-    input:focus, select:focus {
+    input:focus {
       border-color: var(--accent-cyan);
-      box-shadow: 0 0 5px rgba(0, 240, 255, 0.2);
+      box-shadow: 0 0 8px rgba(0, 240, 255, 0.2);
     }
 
     .checkbox-group {
       display: flex;
       flex-direction: column;
       gap: 8px;
-      background: rgba(255, 255, 255, 0.02);
-      padding: 10px;
-      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 12px;
+      border-radius: 8px;
       border: 1px solid var(--border-color);
     }
 
@@ -208,12 +263,19 @@
       font-size: 0.85rem;
       cursor: pointer;
       color: var(--text-main);
+      user-select: none;
+    }
+
+    .checkbox-label input {
+      accent-color: var(--accent-cyan);
+      width: 15px;
+      height: 15px;
     }
 
     .slider-container {
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 6px;
     }
 
     .slider-header {
@@ -223,7 +285,8 @@
     }
 
     .slider-val {
-      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
       color: var(--accent-cyan);
     }
 
@@ -232,96 +295,96 @@
       width: 100%;
       height: 6px;
       border-radius: 3px;
-      background: rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.08);
       outline: none;
     }
 
     input[type="range"]::-webkit-slider-thumb {
       -webkit-appearance: none;
       appearance: none;
-      width: 14px;
-      height: 14px;
+      width: 16px;
+      height: 16px;
       border-radius: 50%;
       background: var(--accent-cyan);
       cursor: pointer;
-      box-shadow: 0 0 8px var(--accent-cyan);
+      box-shadow: 0 0 10px var(--accent-cyan);
     }
 
     /* Buttons */
     .btn-fire {
-      background: linear-gradient(135deg, #ff0055, #990033);
+      background: linear-gradient(135deg, #ff0055, #a30036);
       color: #fff;
       font-family: inherit;
-      font-weight: 700;
+      font-weight: 800;
       font-size: 1rem;
-      letter-spacing: 1px;
+      letter-spacing: 1.5px;
       border: none;
-      border-radius: 8px;
-      padding: 12px;
+      border-radius: 10px;
+      padding: 14px;
       cursor: pointer;
-      box-shadow: 0 0 10px rgba(255, 0, 85, 0.3);
-      transition: all 0.2s;
+      box-shadow: 0 0 15px rgba(255, 0, 85, 0.35);
+      transition: all 0.25s;
     }
 
-    .btn-fire:hover {
-      box-shadow: 0 0 18px rgba(255, 0, 85, 0.6);
+    .btn-fire:hover:not(:disabled) {
+      box-shadow: 0 0 25px rgba(255, 0, 85, 0.75);
       transform: translateY(-1px);
     }
 
     .btn-fire:disabled {
-      background: rgba(255, 0, 85, 0.2);
-      color: rgba(255, 255, 255, 0.3);
+      background: rgba(255, 0, 85, 0.15);
+      color: rgba(255, 255, 255, 0.2);
       box-shadow: none;
       cursor: not-allowed;
-      transform: none;
     }
 
     .btn-stop {
-      background: linear-gradient(135deg, var(--accent-amber), #cc8800);
+      background: linear-gradient(135deg, var(--accent-amber), #bd7a00);
       color: #fff;
       font-family: inherit;
-      font-weight: 700;
+      font-weight: 800;
       font-size: 1rem;
       border: none;
-      border-radius: 8px;
-      padding: 10px;
+      border-radius: 10px;
+      padding: 12px;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.25s;
     }
 
     .btn-stop:hover:not(:disabled) {
-      box-shadow: 0 0 18px rgba(255, 170, 0, 0.6);
+      box-shadow: 0 0 20px rgba(255, 170, 0, 0.6);
       transform: translateY(-1px);
     }
 
     .btn-stop:disabled {
-      background: rgba(255, 170, 0, 0.2);
-      color: rgba(255, 255, 255, 0.3);
+      background: rgba(255, 170, 0, 0.15);
+      color: rgba(255, 255, 255, 0.2);
       cursor: not-allowed;
     }
 
     .btn-shuffle {
-      background: rgba(255, 255, 255, 0.05);
+      background: rgba(255, 255, 255, 0.04);
       border: 1px solid var(--border-color);
-      border-radius: 6px;
+      border-radius: 8px;
       color: #fff;
       padding: 8px 12px;
       cursor: pointer;
       font-size: 0.8rem;
+      transition: background 0.2s;
     }
 
     .btn-shuffle:hover {
       background: rgba(255, 255, 255, 0.1);
     }
 
-    /* Blast Status Display */
+    /* Blast Status Stats Cards */
     .blast-info-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      background: rgba(255, 255, 255, 0.02);
-      padding: 10px;
-      border-radius: 6px;
+      gap: 12px;
+      background: rgba(0, 0, 0, 0.25);
+      padding: 12px;
+      border-radius: 10px;
       border: 1px solid var(--border-color);
     }
 
@@ -334,52 +397,87 @@
     .info-lbl {
       font-size: 0.75rem;
       color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
     }
 
     .info-val {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 1rem;
+      font-size: 1.1rem;
       font-weight: 700;
     }
 
     .progress-bar-container {
       width: 100%;
-      height: 8px;
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 4px;
+      height: 10px;
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 5px;
       overflow: hidden;
-      margin-top: 5px;
+      margin-top: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.02);
     }
 
     .progress-bar {
       height: 100%;
       width: 0%;
-      background: linear-gradient(to right, var(--accent-cyan), var(--accent-purple));
+      background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple));
+      box-shadow: 0 0 8px var(--accent-cyan);
       transition: width 0.3s;
     }
 
-    /* Chart Card */
+    /* Chart Panel */
+    .telemetry-charts-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .chart-card {
+      padding: 1.2rem;
+    }
+
     .chart-container {
       position: relative;
       width: 100%;
-      height: 220px;
+      height: 200px;
     }
 
-    /* Pod Health List */
+    /* Pod status grid list */
     .pod-grid {
       display: grid;
       grid-template-columns: 1fr;
       gap: 10px;
+      max-height: 480px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    /* Custom scrollbar */
+    .pod-grid::-webkit-scrollbar, .console-terminal::-webkit-scrollbar {
+      width: 5px;
+    }
+    .pod-grid::-webkit-scrollbar-track, .console-terminal::-webkit-scrollbar-track {
+      background: rgba(0,0,0,0.1);
+    }
+    .pod-grid::-webkit-scrollbar-thumb, .console-terminal::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.08);
+      border-radius: 3px;
     }
 
     .pod-card {
       background: rgba(255, 255, 255, 0.02);
       border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 10px;
+      border-radius: 10px;
+      padding: 12px;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .pod-card:hover {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(0, 240, 255, 0.15);
     }
 
     .pod-header {
@@ -390,25 +488,25 @@
 
     .pod-name {
       font-size: 0.9rem;
-      font-weight: 600;
+      font-weight: 700;
       color: var(--text-main);
     }
 
     .pod-status-badge {
-      font-size: 0.75rem;
-      padding: 2px 8px;
+      font-size: 0.7rem;
+      padding: 3px 8px;
       border-radius: 4px;
-      font-weight: 600;
-      background: rgba(0, 255, 102, 0.1);
+      font-weight: 700;
+      background: rgba(0, 255, 102, 0.08);
       color: var(--accent-green);
       border: 1px solid rgba(0, 255, 102, 0.2);
     }
 
     .pod-status-badge.error {
-      background: rgba(255, 0, 85, 0.1);
+      background: rgba(255, 0, 85, 0.12);
       color: var(--accent-red);
-      border: 1px solid rgba(255, 0, 85, 0.2);
-      animation: pulse 1s infinite alternate;
+      border: 1px solid rgba(255, 0, 85, 0.3);
+      animation: pulse-border 1s infinite alternate;
     }
 
     .pod-status-badge.waiting {
@@ -427,46 +525,52 @@
     .detail-val {
       font-family: 'JetBrains Mono', monospace;
       color: var(--text-main);
-      font-weight: bold;
+      font-weight: 700;
     }
 
     /* Terminal Console */
     .console-terminal {
-      background: #050608;
+      background: #030406;
       border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 10px;
+      border-radius: 10px;
+      padding: 12px;
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       color: #00ff66;
-      height: 250px;
+      height: 240px;
       overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: 4px;
-      box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+      gap: 6px;
+      box-shadow: inset 0 0 15px rgba(0,0,0,0.95);
     }
 
     .console-line {
-      line-height: 1.3;
+      line-height: 1.4;
       word-break: break-all;
+      border-left: 2px solid #00bb44;
+      padding-left: 8px;
     }
 
     .console-line.warn {
       color: var(--accent-amber);
+      border-left-color: var(--accent-amber);
     }
 
     .console-line.error {
       color: var(--accent-red);
+      border-left-color: var(--accent-red);
+      font-weight: bold;
     }
 
     .console-line.system {
       color: var(--accent-cyan);
+      border-left-color: var(--accent-cyan);
     }
 
-    @keyframes pulse {
-      0% { box-shadow: 0 0 4px rgba(255, 0, 85, 0.3); }
-      100% { box-shadow: 0 0 12px rgba(255, 0, 85, 0.6); }
+    @keyframes pulse-border {
+      0% { box-shadow: 0 0 3px var(--accent-red); border-color: rgba(255,0,85,0.3); }
+      100% { box-shadow: 0 0 15px var(--accent-red); border-color: rgba(255,0,85,0.7); }
     }
   </style>
 </head>
@@ -475,13 +579,14 @@
   <header>
     <div class="logo-container">
       <div class="logo-badge"></div>
-      <h1>REDDO SAGA OBSERVER</h1>
+      <h1>REDDO CHAOS OBSERVER</h1>
+      <div class="engine-status-banner" id="master-engine-banner">SAGA ENGINE OPERATING NORMALLY</div>
     </div>
 
     <div class="system-status">
       <div class="status-item">
         <label for="cannon-url-input" style="margin-right: 5px;">CANNON API:</label>
-        <input type="text" id="cannon-url-input" value="http://localhost:8083" style="font-size: 0.75rem; padding: 2px 6px; width: 140px; border-radius: 4px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); color: #fff;">
+        <input type="text" id="cannon-url-input" value="http://localhost:8083" style="font-size: 0.75rem; padding: 3px 8px; width: 140px; border-radius: 6px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff;">
       </div>
       <div class="status-item">
         <div class="indicator" id="cannon-connection-indicator"></div>
@@ -489,25 +594,25 @@
       </div>
       <div class="status-item">
         <div class="indicator" id="stream-indicator"></div>
-        <span>TELEMETRY STREAM: <b id="stream-status">ACTIVE</b></span>
+        <span>STREAM: <b id="stream-status">ACTIVE</b></span>
       </div>
     </div>
   </header>
 
   <div class="dashboard-grid">
     
-    <!-- LEFT PANEL: CHAOS CONFIG PANEL -->
+    <!-- LEFT COLUMN: CHAOS CONFIG PANEL -->
     <div class="card">
-      <div class="card-title">Chaos Control Console 💥</div>
+      <div class="card-title">Chaos Control Console 🕹️</div>
       
       <div class="row-inputs">
         <div class="form-group">
           <label for="total-requests">Total Workflows</label>
-          <input type="number" id="total-requests" value="200" min="1">
+          <input type="number" id="total-requests" value="300" min="1">
         </div>
         <div class="form-group">
           <label for="concurrency">Concurrency</label>
-          <input type="number" id="concurrency" value="10" min="1">
+          <input type="number" id="concurrency" value="15" min="1">
         </div>
       </div>
 
@@ -592,41 +697,62 @@
       </div>
     </div>
 
-    <!-- CENTER PANEL: MONITOR & METRICS -->
-    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-      <!-- Chart Card -->
-      <div class="card">
+    <!-- CENTER COLUMN: MASTER METRICS CHARTS -->
+    <div class="telemetry-charts-panel">
+      <!-- Queue depth chart -->
+      <div class="card chart-card">
         <div class="card-title">
-          <span>RabbitMQ Queue Metrics</span>
-          <span style="font-size: 0.8rem; text-transform: none; color: var(--accent-cyan);">Streamed Realtime</span>
+          <span>Broker Task Queues</span>
+          <span style="font-size: 0.75rem; text-transform: none; color: var(--accent-cyan);">RabbitMQ Depths</span>
         </div>
         <div class="chart-container">
           <canvas id="queueChart"></canvas>
         </div>
       </div>
 
-      <!-- Pod Health Grid -->
-      <div class="card" style="flex: 1;">
-        <div class="card-title">K8s Pod Resource Monitor</div>
-        <div class="pod-grid" id="pod-monitor-grid">
-          <!-- Populated dynamically -->
-          <div style="text-align: center; color: var(--text-muted); padding: 2rem;">Awaiting telemetry data stream...</div>
+      <!-- CPU chart -->
+      <div class="card chart-card">
+        <div class="card-title">
+          <span>Deployment CPU Trends (m)</span>
+          <span style="font-size: 0.75rem; text-transform: none; color: var(--accent-purple);">Microservice Metrics</span>
+        </div>
+        <div class="chart-container">
+          <canvas id="cpuChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Memory chart -->
+      <div class="card chart-card">
+        <div class="card-title">
+          <span>Deployment Memory Trends (Mi)</span>
+          <span style="font-size: 0.75rem; text-transform: none; color: #ff00ff;">Microservice Footprints</span>
+        </div>
+        <div class="chart-container">
+          <canvas id="memChart"></canvas>
         </div>
       </div>
     </div>
 
-    <!-- RIGHT PANEL: SYSTEM TERMINAL LOGS -->
-    <div class="card">
-      <div class="card-title">System Event Terminal 📟</div>
-      <div class="console-terminal" id="terminal-console">
-        <div class="console-line system">[System] Logger console connected. Awaiting events...</div>
+    <!-- RIGHT COLUMN: SYSTEM EVENT LOGS & POD HEALTH -->
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+      <div class="card" style="flex: 1;">
+        <div class="card-title">K8s Pod Resource Grid</div>
+        <div class="pod-grid" id="pod-monitor-grid">
+          <div style="text-align: center; color: var(--text-muted); padding: 2rem;">Awaiting telemetry data stream...</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Realtime Trace Logging 📟</div>
+        <div class="console-terminal" id="terminal-console">
+          <div class="console-line system">[System] Connection active. Listening for cluster trace logs...</div>
+        </div>
       </div>
     </div>
 
   </div>
 
   <script>
-    // Constants & Global state
     const elements = {
       cannonURL: document.getElementById('cannon-url-input'),
       cannonIndicator: document.getElementById('cannon-connection-indicator'),
@@ -654,7 +780,8 @@
       progressTxt: document.getElementById('blast-progress-txt'),
       progressBar: document.getElementById('blast-progress-bar'),
       podGrid: document.getElementById('pod-monitor-grid'),
-      console: document.getElementById('terminal-console')
+      console: document.getElementById('terminal-console'),
+      masterBanner: document.getElementById('master-engine-banner')
     };
 
     // Sliders UI Sync
@@ -667,7 +794,7 @@
       elements.seed.value = Math.floor(Math.random() * 90000) + 10000;
     };
 
-    // Logging helper
+    // Console Logging
     function logToConsole(message, type = 'info') {
       const line = document.createElement('div');
       line.className = `console-line ${type}`;
@@ -675,65 +802,147 @@
       line.textContent = `[${ts}] ${message}`;
       elements.console.appendChild(line);
       elements.console.scrollTop = elements.console.scrollHeight;
+
+      // Clean up old log lines to prevent DOM bloat
+      while (elements.console.childNodes.length > 100) {
+        elements.console.removeChild(elements.console.firstChild);
+      }
     }
 
-    // Chart.js init
-    const chartCtx = document.getElementById('queueChart').getContext('2d');
+    // Chart.js Setup
     const maxDataPoints = 30;
     const chartLabels = Array.from({length: maxDataPoints}, () => '');
+
+    const components = ['gate', 'broker', 'worker', 'cannon', 'probe', 'rabbitmq', 'postgres', 'redis'];
+    const componentColors = {
+      gate: '#ec4899',
+      broker: '#a855f7',
+      worker: '#06b6d4',
+      cannon: '#ef4444',
+      probe: '#3b82f6',
+      rabbitmq: '#f59e0b',
+      postgres: '#10b981',
+      redis: '#64748b'
+    };
+
+    // 1. Queue depth chart
+    const queueChartCtx = document.getElementById('queueChart').getContext('2d');
     const javaQueueData = Array(maxDataPoints).fill(0);
     const nodeQueueData = Array(maxDataPoints).fill(0);
-
-    const queueChart = new Chart(chartCtx, {
+    const queueChart = new Chart(queueChartCtx, {
       type: 'line',
       data: {
         labels: chartLabels,
         datasets: [
-          {
-            label: 'Java Queue Depth',
-            data: javaQueueData,
-            borderColor: '#bd00ff',
-            backgroundColor: 'rgba(189, 0, 255, 0.05)',
-            borderWidth: 2,
-            tension: 0.3,
-            fill: true
-          },
-          {
-            label: 'Node Queue Depth',
-            data: nodeQueueData,
-            borderColor: '#00f0ff',
-            backgroundColor: 'rgba(0, 240, 255, 0.05)',
-            borderWidth: 2,
-            tension: 0.3,
-            fill: true
-          }
+          { label: 'Java Queue', data: javaQueueData, borderColor: '#bd00ff', borderWidth: 2.5, tension: 0.3, fill: false },
+          { label: 'Node Queue', data: nodeQueueData, borderColor: '#00f0ff', borderWidth: 2.5, tension: 0.3, fill: false }
         ]
       },
-      options: {
+      options: getCommonChartOptions()
+    });
+
+    // 2. Pod CPU chart
+    const cpuChartCtx = document.getElementById('cpuChart').getContext('2d');
+    const cpuDatasets = components.map(comp => ({
+      label: comp,
+      data: Array(maxDataPoints).fill(0),
+      borderColor: componentColors[comp],
+      borderWidth: 2,
+      tension: 0.3,
+      fill: false
+    }));
+    const cpuChart = new Chart(cpuChartCtx, {
+      type: 'line',
+      data: { labels: chartLabels, datasets: cpuDatasets },
+      options: getCommonChartOptions()
+    });
+
+    // 3. Pod Memory chart
+    const memChartCtx = document.getElementById('memChart').getContext('2d');
+    const memDatasets = components.map(comp => ({
+      label: comp,
+      data: Array(maxDataPoints).fill(0),
+      borderColor: componentColors[comp],
+      borderWidth: 2,
+      tension: 0.3,
+      fill: false
+    }));
+    const memChart = new Chart(memChartCtx, {
+      type: 'line',
+      data: { labels: chartLabels, datasets: memDatasets },
+      options: getCommonChartOptions()
+    });
+
+    function getCommonChartOptions() {
+      return {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
           legend: {
-            labels: { color: '#8a99ad', font: { family: 'Outfit' } }
+            position: 'top',
+            labels: { color: '#8a99ad', boxWidth: 10, font: { family: 'Outfit', size: 10 } }
           }
         },
         scales: {
           x: { display: false },
           y: {
-            grid: { color: 'rgba(255, 255, 255, 0.04)' },
-            ticks: { color: '#8a99ad', font: { family: 'JetBrains Mono' }, stepSize: 1 }
+            grid: { color: 'rgba(255, 255, 255, 0.03)' },
+            ticks: { color: '#8a99ad', font: { family: 'JetBrains Mono', size: 10 } }
           }
         }
-      }
-    });
+      };
+    }
 
-    // Update charts dynamically
-    function pushQueueMetrics(javaVal, nodeVal) {
+    function getComponentFromPodName(podName) {
+      if (podName.startsWith('postgres')) return 'postgres';
+      if (podName.startsWith('gate-')) return 'gate';
+      if (podName.startsWith('broker-')) return 'broker';
+      if (podName.startsWith('worker-')) return 'worker';
+      if (podName.startsWith('cannon-')) return 'cannon';
+      if (podName.startsWith('probe-')) return 'probe';
+      if (podName.startsWith('rabbitmq-')) return 'rabbitmq';
+      if (podName.startsWith('redis-')) return 'redis';
+      return null;
+    }
+
+    // Update Master Trends Chart
+    function updateMasterCharts(telemetry) {
+      // 1. Update queue depth chart
       javaQueueData.shift();
-      javaQueueData.push(javaVal);
+      javaQueueData.push(telemetry.rabbitmq.java_queue_depth);
       nodeQueueData.shift();
-      nodeQueueData.push(nodeVal);
-      queueChart.update('none'); // Update without full redraw animation for performance
+      nodeQueueData.push(telemetry.rabbitmq.node_queue_depth);
+      queueChart.update('none');
+
+      // Reset values for this tick to aggregate multi-replica pods if any
+      const tickCPU = {};
+      const tickMem = {};
+      components.forEach(c => { tickCPU[c] = 0; tickMem[c] = 0; });
+
+      telemetry.pods.forEach(pod => {
+        const comp = getComponentFromPodName(pod.name);
+        if (comp) {
+          // Parse values (remove 'm' and 'Mi')
+          const cpuVal = parseInt(pod.cpu.replace('m', '')) || 0;
+          const memVal = parseInt(pod.memory.replace('Mi', '')) || 0;
+          tickCPU[comp] += cpuVal;
+          tickMem[comp] += memVal;
+        }
+      });
+
+      // 2. Update CPU Chart
+      cpuChart.data.datasets.forEach(ds => {
+        ds.data.shift();
+        ds.data.push(tickCPU[ds.label]);
+      });
+      cpuChart.update('none');
+
+      // 3. Update Memory Chart
+      memChart.data.datasets.forEach(ds => {
+        ds.data.shift();
+        ds.data.push(tickMem[ds.label]);
+      });
+      memChart.update('none');
     }
 
     // Fire Cannon
@@ -760,7 +969,7 @@
       };
 
       elements.btnFire.disabled = true;
-      logToConsole(`Fire instruction dispatched. Total requests: ${payload.total_requests}, Concurrency: ${payload.concurrency}`, 'system');
+      logToConsole(`Launching Fire call. Seeds: ${payload.seed}, Delay: ${payload.schedule_delay_seconds}s`, 'system');
 
       try {
         const res = await fetch(`${elements.cannonURL.value}/api/v1/chaos/fire`, {
@@ -769,27 +978,23 @@
           body: JSON.stringify(payload)
         });
 
-        if (!res.ok) {
-          throw new Error(`Server returned HTTP ${res.status}`);
-        }
+        if (!res.ok) throw new Error(`Server returned HTTP ${res.status}`);
 
         const data = await res.json();
-        logToConsole(`Cannon response: ${data.message} (status: ${data.status})`, 'system');
+        logToConsole(`Blaster trigger registered: ${data.message}`, 'system');
         elements.btnStop.disabled = false;
 
       } catch (err) {
-        logToConsole(`Dispatched Fire command failed: ${err.message}`, 'error');
+        logToConsole(`Fire command failed: ${err.message}`, 'error');
         elements.btnFire.disabled = false;
       }
     };
 
     // Stop Blast
     elements.btnStop.onclick = async () => {
-      logToConsole('Dispatched Cease Fire command...', 'system');
+      logToConsole('Stopping active fire worker pools...', 'system');
       try {
-        const res = await fetch(`${elements.cannonURL.value}/api/v1/chaos/stop`, {
-          method: 'POST'
-        });
+        const res = await fetch(`${elements.cannonURL.value}/api/v1/chaos/stop`, { method: 'POST' });
         const data = await res.json();
         logToConsole(`Cannon response: ${data.message}`, 'system');
         elements.btnStop.disabled = true;
@@ -800,7 +1005,7 @@
     };
 
     // Cannon Status Polling Loop
-    let statusInterval = setInterval(checkCannonStatus, 1000);
+    setInterval(checkCannonStatus, 1000);
 
     async function checkCannonStatus() {
       try {
@@ -809,12 +1014,10 @@
 
         const status = await res.json();
         
-        // Update connection status
         elements.cannonIndicator.className = 'indicator';
         elements.cannonConnText.textContent = 'CONNECTED';
         elements.cannonConnText.style.color = 'var(--accent-green)';
 
-        // Update active blast information
         elements.blastState.textContent = status.status;
         if (status.status === 'RUNNING') {
           elements.blastState.style.color = 'var(--accent-red)';
@@ -831,14 +1034,13 @@
           elements.btnStop.disabled = true;
         }
 
-        // Update progress statistics
         elements.progressTxt.textContent = `${status.progress} / ${status.total}`;
         const pct = status.total > 0 ? (status.progress / status.total) * 100 : 0;
         elements.progressBar.style.width = pct + '%';
+        elements.sidebarPct = pct;
         elements.blastRate.textContent = (status.success_rate * 100).toFixed(1) + '%';
 
       } catch (err) {
-        // Disconnected status
         elements.cannonIndicator.className = 'indicator inactive';
         elements.cannonConnText.textContent = 'DISCONNECTED';
         elements.cannonConnText.style.color = 'var(--accent-red)';
@@ -855,10 +1057,10 @@
       elements.streamIndicator.className = 'indicator';
       elements.streamText.textContent = 'ACTIVE';
       elements.streamText.style.color = 'var(--accent-green)';
-      logToConsole('Established connection to Live Telemetry SSE stream.', 'system');
+      logToConsole('Telemetry stream channel active.', 'system');
     };
 
-    sse.onerror = (e) => {
+    sse.onerror = () => {
       elements.streamIndicator.className = 'indicator inactive';
       elements.streamText.textContent = 'DISCONNECTED';
       elements.streamText.style.color = 'var(--accent-red)';
@@ -868,21 +1070,38 @@
       try {
         const telemetry = JSON.parse(event.data);
         
-        // 1. Push Queue Depth metrics to line chart
-        pushQueueMetrics(telemetry.rabbitmq.java_queue_depth, telemetry.rabbitmq.node_queue_depth);
+        // 1. Push metrics to multi-line charts
+        updateMasterCharts(telemetry);
 
-        // 2. Render K8s Pod grids
+        // 2. Render Pod list grid
         renderPodsGrid(telemetry.pods);
 
-        // 3. Scan for container crashes or hangs to print to Terminal console logs
+        // 3. Scan for incidents or logs to write to log console
+        let engineCompromised = false;
+        let activeBlasts = elements.blastState.textContent.includes('RUNNING');
+
         telemetry.pods.forEach(pod => {
-          if (pod.status.includes('CrashLoop') || pod.status.includes('Error')) {
-            logToConsole(`CRITICAL: Pod ${pod.name} in state ${pod.status}! (Restarts: ${pod.restarts})`, 'error');
+          const isCrash = pod.status.includes('CrashLoop') || pod.status.includes('Error') || pod.status.includes('OOM');
+          if (isCrash) {
+            engineCompromised = true;
+            logToConsole(`[Incident] Pod ${pod.name} in state: ${pod.status}! (Total restarts: ${pod.restarts})`, 'error');
           }
         });
 
+        // 4. Update Engine banner state
+        if (engineCompromised) {
+          elements.masterBanner.textContent = 'SAGA COORDINATOR IN DISTRESS';
+          elements.masterBanner.className = 'engine-status-banner compromised';
+        } else if (activeBlasts) {
+          elements.masterBanner.textContent = 'CHAOS CYCLONE INJECTING FAULTS';
+          elements.masterBanner.className = 'engine-status-banner compromised';
+        } else {
+          elements.masterBanner.textContent = 'SAGA ENGINE OPERATING NORMALLY';
+          elements.masterBanner.className = 'engine-status-banner';
+        }
+
       } catch (err) {
-        console.error('Failed to parse SSE payload', err);
+        console.error('SSE parsing error', err);
       }
     };
 
@@ -892,11 +1111,10 @@
         return;
       }
 
-      // Sort pods by name for stable UI rendering positions
       pods.sort((a, b) => a.name.localeCompare(b.name));
 
       elements.podGrid.innerHTML = pods.map(pod => {
-        const isError = pod.status.includes('Error') || pod.status.includes('Crash') || pod.status.includes('Fail');
+        const isError = pod.status.includes('Error') || pod.status.includes('Crash') || pod.status.includes('Terminating');
         const badgeClass = isError ? 'pod-status-badge error' : 'pod-status-badge';
         return `
           <div class="pod-card">
@@ -906,7 +1124,7 @@
             </div>
             <div class="pod-details">
               <div>CPU: <span class="detail-val">${pod.cpu}</span></div>
-              <div>Memory: <span class="detail-val">${pod.memory}</span></div>
+              <div>Mem: <span class="detail-val">${pod.memory}</span></div>
               <div>Restarts: <span class="detail-val" style="color:${pod.restarts > 0 ? 'var(--accent-amber)' : 'inherit'}">${pod.restarts}</span></div>
               <div>Age: <span class="detail-val">${pod.age}</span></div>
             </div>
