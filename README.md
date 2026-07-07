@@ -118,7 +118,21 @@ Once running, the services can be accessed at the following host addresses:
 | **PostgreSQL Database** | `localhost:5432` | SQL Client (User: `postgres`, Pass: `postgres`, DB: `reddo`) |
 | **Redis Database** | `localhost:6379` | Redis Client (DLM lock manager) |
 
-### 4. API Testing (Insomnia)
+### 4. Horizontal Pod Autoscaling (HPA)
+The platform is configured to horizontally autoscale microservice replica pods under high load.
+* **Autoscaling Metric Target**: **`30%` average CPU utilization** relative to the pod's requested resources.
+* **Autoscale Range**: Min replicas `1`, Max replicas `2` (by default, all services run exactly `1` pod replica when idle).
+* **Stabilization Cool-down**: Scale-down is customized to a **`60-second` stabilization window** (overriding the Kubernetes default of 5 minutes) to facilitate rapid, responsive cool-down test verification.
+* **Manifest Deployment**:
+  ```bash
+  kubectl apply -f k8s/hpa.yaml
+  ```
+* **Verify HPA Status**:
+  ```bash
+  kubectl get hpa -n reddo
+  ```
+
+### 5. API Testing (Insomnia)
 For executing and testing API endpoints across REDDO services, an Insomnia collection is maintained in the project.
 * Import the collection file [insomnia/REDDO.insomnia_collection.json](file:///d:/Coding%20Projects/REDDO/insomnia/REDDO.insomnia_collection.json) into your Insomnia workspace.
 * Configure the base environment variable `base_url` (defaults to `http://localhost:8080` for local development).

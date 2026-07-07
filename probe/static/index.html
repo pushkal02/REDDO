@@ -1,751 +1,300 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>REDDO Saga Chaos Dashboard</title>
+  
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS & Chart.js -->
+  <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    :root {
-      --bg-dark: #07080b;
-      --bg-slate: #0d1017;
-      --card-bg: rgba(13, 17, 28, 0.75);
-      --border-color: rgba(255, 255, 255, 0.05);
-      --accent-cyan: #00f0ff;
-      --accent-purple: #bd00ff;
-      --accent-red: #ff0055;
-      --accent-green: #00ff66;
-      --accent-amber: #ffaa00;
-      --text-main: #f1f3f9;
-      --text-muted: #6e7d95;
-      --glow-cyan: 0 0 15px rgba(0, 240, 255, 0.2);
-      --glow-red: 0 0 15px rgba(255, 0, 85, 0.2);
-    }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    body {
-      background-color: var(--bg-dark);
-      background-image: 
-        radial-gradient(at 10% 10%, rgba(189, 0, 255, 0.08) 0px, transparent 50%),
-        radial-gradient(at 50% 10%, rgba(0, 240, 255, 0.06) 0px, transparent 50%),
-        radial-gradient(at 90% 90%, rgba(255, 0, 85, 0.06) 0px, transparent 50%);
-      background-attachment: fixed;
-      font-family: 'Outfit', sans-serif;
-      color: var(--text-main);
-      min-height: 100vh;
-      overflow-x: hidden;
-      padding-bottom: 2rem;
-    }
-
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 1rem 2rem;
-      background: rgba(7, 8, 11, 0.85);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border-color);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-
-    .logo-container {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .logo-badge {
-      background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
-      width: 36px;
-      height: 36px;
-      border-radius: 10px;
-      box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
-      position: relative;
-    }
-
-    .logo-badge::after {
-      content: '';
-      position: absolute;
-      top: 25%;
-      left: 25%;
-      width: 50%;
-      height: 50%;
-      background: #000;
-      border-radius: 50%;
-    }
-
-    h1 {
-      font-size: 1.6rem;
-      font-weight: 800;
-      letter-spacing: 3px;
-      background: linear-gradient(to right, #ffffff, #a3b3cc);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    /* Master Engine Status Banner */
-    .engine-status-banner {
-      background: rgba(0, 255, 102, 0.06);
-      border: 1px solid rgba(0, 255, 102, 0.15);
-      color: var(--accent-green);
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.85rem;
-      font-weight: bold;
-      padding: 6px 20px;
-      border-radius: 20px;
-      letter-spacing: 1px;
-      box-shadow: 0 0 10px rgba(0, 255, 102, 0.05);
-      transition: all 0.3s;
-    }
-
-    .engine-status-banner.compromised {
-      background: rgba(255, 0, 85, 0.08);
-      border: 1px solid rgba(255, 0, 85, 0.25);
-      color: var(--accent-red);
-      box-shadow: 0 0 15px rgba(255, 0, 85, 0.15);
-      animation: pulse-border 1.5s infinite alternate;
-    }
-
-    .system-status {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-      font-size: 0.8rem;
-    }
-
-    .status-item {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      background: rgba(255, 255, 255, 0.02);
-      padding: 6px 12px;
-      border-radius: 8px;
-      border: 1px solid var(--border-color);
-    }
-
-    .indicator {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background-color: var(--accent-green);
-      box-shadow: 0 0 8px var(--accent-green);
-    }
-
-    .indicator.inactive {
-      background-color: var(--accent-red);
-      box-shadow: 0 0 8px var(--accent-red);
-    }
-
-    .indicator.amber {
-      background-color: var(--accent-amber);
-      box-shadow: 0 0 8px var(--accent-amber);
-    }
-
-    .dashboard-grid {
-      display: grid;
-      grid-template-columns: 380px 1fr 440px;
-      gap: 1.5rem;
-      padding: 1.5rem 2rem;
-      max-width: 1900px;
-      margin: 0 auto;
-    }
-
-    @media (max-width: 1400px) {
-      .dashboard-grid {
-        grid-template-columns: 1fr;
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Outfit', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            cyber: {
+              black: '#030407',
+              slate: '#090d16',
+              card: 'rgba(9, 13, 22, 0.7)',
+              cyan: '#00f0ff',
+              purple: '#bd00ff',
+              red: '#ff0055',
+              green: '#00ff66',
+              amber: '#ffaa00',
+              border: 'rgba(255, 255, 255, 0.05)',
+            }
+          }
+        }
       }
     }
+  </script>
 
-    .card {
-      background: var(--card-bg);
-      backdrop-filter: blur(20px);
-      border-radius: 16px;
-      border: 1px solid var(--border-color);
-      padding: 1.5rem;
-      display: flex;
-      flex-direction: column;
-      gap: 1.2rem;
-      box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.45);
-      position: relative;
-      overflow: hidden;
+  <style>
+    body {
+      background-color: #030407;
+      background-image: 
+        radial-gradient(at 10% 10%, rgba(189, 0, 255, 0.06) 0px, transparent 40%),
+        radial-gradient(at 90% 90%, rgba(0, 240, 255, 0.05) 0px, transparent 40%);
+      background-attachment: fixed;
     }
-
-    .card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-    }
-
-    .card-title {
-      font-size: 1rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      color: var(--text-muted);
-      border-bottom: 1px solid var(--border-color);
-      padding-bottom: 0.6rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    /* Form Fields */
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 0.4rem;
-    }
-
-    label {
-      font-size: 0.85rem;
-      color: var(--text-muted);
-      font-weight: 600;
-    }
-
-    .row-inputs {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-
-    input[type="number"], input[type="text"] {
-      background: rgba(0, 0, 0, 0.5);
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 10px 14px;
-      color: #fff;
-      font-family: 'Outfit', sans-serif;
-      font-size: 0.9rem;
-      outline: none;
-      transition: all 0.2s;
-    }
-
-    input:focus {
-      border-color: var(--accent-cyan);
-      box-shadow: 0 0 8px rgba(0, 240, 255, 0.2);
-    }
-
-    .checkbox-group {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      background: rgba(0, 0, 0, 0.25);
-      padding: 12px;
-      border-radius: 8px;
-      border: 1px solid var(--border-color);
-    }
-
-    .checkbox-label {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 0.85rem;
-      cursor: pointer;
-      color: var(--text-main);
-      user-select: none;
-    }
-
-    .checkbox-label input {
-      accent-color: var(--accent-cyan);
-      width: 15px;
-      height: 15px;
-    }
-
-    .slider-container {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .slider-header {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.8rem;
-    }
-
-    .slider-val {
-      font-family: 'JetBrains Mono', monospace;
-      font-weight: 700;
-      color: var(--accent-cyan);
-    }
-
-    input[type="range"] {
-      -webkit-appearance: none;
-      width: 100%;
+    
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
       height: 6px;
-      border-radius: 3px;
-      background: rgba(255, 255, 255, 0.08);
-      outline: none;
     }
-
-    input[type="range"]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      background: var(--accent-cyan);
-      cursor: pointer;
-      box-shadow: 0 0 10px var(--accent-cyan);
+    ::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.2);
     }
-
-    /* Buttons */
-    .btn-fire {
-      background: linear-gradient(135deg, #ff0055, #a30036);
-      color: #fff;
-      font-family: inherit;
-      font-weight: 800;
-      font-size: 1rem;
-      letter-spacing: 1.5px;
-      border: none;
-      border-radius: 10px;
-      padding: 14px;
-      cursor: pointer;
-      box-shadow: 0 0 15px rgba(255, 0, 85, 0.35);
-      transition: all 0.25s;
-    }
-
-    .btn-fire:hover:not(:disabled) {
-      box-shadow: 0 0 25px rgba(255, 0, 85, 0.75);
-      transform: translateY(-1px);
-    }
-
-    .btn-fire:disabled {
-      background: rgba(255, 0, 85, 0.15);
-      color: rgba(255, 255, 255, 0.2);
-      box-shadow: none;
-      cursor: not-allowed;
-    }
-
-    .btn-stop {
-      background: linear-gradient(135deg, var(--accent-amber), #bd7a00);
-      color: #fff;
-      font-family: inherit;
-      font-weight: 800;
-      font-size: 1rem;
-      border: none;
-      border-radius: 10px;
-      padding: 12px;
-      cursor: pointer;
-      transition: all 0.25s;
-    }
-
-    .btn-stop:hover:not(:disabled) {
-      box-shadow: 0 0 20px rgba(255, 170, 0, 0.6);
-      transform: translateY(-1px);
-    }
-
-    .btn-stop:disabled {
-      background: rgba(255, 170, 0, 0.15);
-      color: rgba(255, 255, 255, 0.2);
-      cursor: not-allowed;
-    }
-
-    .btn-shuffle {
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      color: #fff;
-      padding: 8px 12px;
-      cursor: pointer;
-      font-size: 0.8rem;
-      transition: background 0.2s;
-    }
-
-    .btn-shuffle:hover {
+    ::-webkit-scrollbar-thumb {
       background: rgba(255, 255, 255, 0.1);
-    }
-
-    /* Blast Status Stats Cards */
-    .blast-info-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      background: rgba(0, 0, 0, 0.25);
-      padding: 12px;
-      border-radius: 10px;
-      border: 1px solid var(--border-color);
-    }
-
-    .info-box {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .info-lbl {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      font-weight: 600;
-      text-transform: uppercase;
-    }
-
-    .info-val {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 1.1rem;
-      font-weight: 700;
-    }
-
-    .progress-bar-container {
-      width: 100%;
-      height: 10px;
-      background: rgba(255, 255, 255, 0.04);
-      border-radius: 5px;
-      overflow: hidden;
-      margin-top: 6px;
-      border: 1px solid var(--border-color);
-    }
-
-    .progress-bar {
-      height: 100%;
-      width: 0%;
-      background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple));
-      box-shadow: 0 0 8px var(--accent-cyan);
-      transition: width 0.3s;
-    }
-
-    /* Chart Panel */
-    .telemetry-charts-panel {
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-    }
-
-    .chart-card {
-      padding: 1.2rem;
-    }
-
-    .chart-container {
-      position: relative;
-      width: 100%;
-      height: 190px;
-    }
-
-    /* Component Grid */
-    .pod-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 12px;
-      max-height: 520px;
-      overflow-y: auto;
-      padding-right: 4px;
-    }
-
-    /* Custom scrollbar */
-    .pod-grid::-webkit-scrollbar, .console-terminal::-webkit-scrollbar {
-      width: 5px;
-    }
-    .pod-grid::-webkit-scrollbar-track, .console-terminal::-webkit-scrollbar-track {
-      background: rgba(0,0,0,0.1);
-    }
-    .pod-grid::-webkit-scrollbar-thumb, .console-terminal::-webkit-scrollbar-thumb {
-      background: rgba(255,255,255,0.08);
-      border-radius: 3px;
-    }
-
-    .pod-card {
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      transition: all 0.2s;
-    }
-
-    .pod-card:hover {
-      background: rgba(255, 255, 255, 0.04);
-      border-color: rgba(0, 240, 255, 0.15);
-      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    }
-
-    .pod-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .pod-name {
-      font-size: 0.95rem;
-      font-weight: 800;
-      letter-spacing: 0.5px;
-      color: var(--text-main);
-    }
-
-    .pod-status-badge {
-      font-size: 0.7rem;
-      padding: 3px 8px;
       border-radius: 4px;
-      font-weight: 700;
-      background: rgba(0, 255, 102, 0.08);
-      color: var(--accent-green);
-      border: 1px solid rgba(0, 255, 102, 0.2);
     }
-
-    .pod-status-badge.error {
-      background: rgba(255, 0, 85, 0.12);
-      color: var(--accent-red);
-      border: 1px solid rgba(255, 0, 85, 0.3);
-      animation: pulse-border 1s infinite alternate;
-    }
-
-    .pod-status-badge.waiting {
-      background: rgba(255, 170, 0, 0.1);
-      color: var(--accent-amber);
-      border: 1px solid rgba(255, 170, 0, 0.2);
-    }
-
-    .pod-details {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr 1fr;
-      font-size: 0.75rem;
-      color: var(--text-muted);
-    }
-
-    .detail-val {
-      font-family: 'JetBrains Mono', monospace;
-      color: var(--text-main);
-      font-weight: 700;
-    }
-
-    /* Terminal Console */
-    .console-terminal {
-      background: #030406;
-      border: 1px solid var(--border-color);
-      border-radius: 10px;
-      padding: 12px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.78rem;
-      color: #00ff66;
-      height: 220px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      box-shadow: inset 0 0 15px rgba(0,0,0,0.95);
-    }
-
-    .console-line {
-      line-height: 1.4;
-      word-break: break-all;
-      border-left: 2px solid #00bb44;
-      padding-left: 8px;
-    }
-
-    .console-line.warn {
-      color: var(--accent-amber);
-      border-left-color: var(--accent-amber);
-    }
-
-    .console-line.error {
-      color: var(--accent-red);
-      border-left-color: var(--accent-red);
-      font-weight: bold;
-    }
-
-    .console-line.system {
-      color: var(--accent-cyan);
-      border-left-color: var(--accent-cyan);
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.2);
     }
 
     @keyframes pulse-border {
-      0% { box-shadow: 0 0 3px var(--accent-red); border-color: rgba(255,0,85,0.3); }
-      100% { box-shadow: 0 0 15px var(--accent-red); border-color: rgba(255,0,85,0.7); }
+      0% { box-shadow: 0 0 4px rgba(255,0,85,0.2); border-color: rgba(255,0,85,0.2); }
+      100% { box-shadow: 0 0 16px rgba(255,0,85,0.6); border-color: rgba(255,0,85,0.6); }
+    }
+    .status-pulse-red {
+      animation: pulse-border 1.5s infinite alternate;
     }
   </style>
 </head>
-<body>
+<body class="text-slate-100 min-h-screen flex flex-col font-sans">
 
-  <header>
-    <div class="logo-container">
-      <div class="logo-badge"></div>
-      <h1>REDDO CHAOS OBSERVER</h1>
-      <div class="engine-status-banner" id="master-engine-banner">SAGA ENGINE OPERATING NORMALLY</div>
+  <!-- TOP HEADER -->
+  <header class="sticky top-0 z-50 flex items-center justify-between px-8 py-4 bg-cyber-black/95 backdrop-blur-md border-b border-white/5">
+    <div class="flex items-center gap-4">
+      <div class="w-9 height-9 rounded-lg bg-gradient-to-br from-cyber-purple to-cyber-cyan shadow-[0_0_15px_rgba(0,240,255,0.3)] relative after:content-[''] after:absolute after:top-1/4 after:left-1/4 after:w-1/2 after:after:h-1/2 after:bg-black after:rounded-full"></div>
+      <div>
+        <h1 class="text-xl font-extrabold tracking-widest bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">REDDO SAGA PLATFORM</h1>
+        <p class="text-xs text-cyber-cyan font-mono tracking-wider">REALTIME OBSERVABILITY & CHAOS CONTROL</p>
+      </div>
+      <div class="ml-6 px-4 py-1 rounded-full text-xs font-mono font-bold tracking-wider bg-cyber-green/5 border border-cyber-green/20 text-cyber-green transition-all" id="master-engine-banner">
+        SAGA ENGINE OPERATING NORMALLY
+      </div>
     </div>
 
-    <div class="system-status">
-      <div class="status-item">
-        <label for="cannon-url-input" style="margin-right: 5px;">CANNON API:</label>
-        <input type="text" id="cannon-url-input" value="http://localhost:8083" style="font-size: 0.75rem; padding: 3px 8px; width: 140px; border-radius: 6px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff;">
+    <!-- CONNECTION STATE -->
+    <div class="flex items-center gap-6 text-xs">
+      <div class="flex items-center gap-2 bg-white/2 px-3 py-1.5 rounded-lg border border-white/5">
+        <span class="text-slate-400 font-semibold">CANNON API:</span>
+        <input type="text" id="cannon-url-input" value="http://localhost:8083" class="bg-black/40 border border-white/5 rounded px-2 py-0.5 w-36 text-white font-mono outline-none focus:border-cyber-cyan">
       </div>
-      <div class="status-item">
-        <div class="indicator" id="cannon-connection-indicator"></div>
-        <span>CANNON: <b id="cannon-connection-status">CONNECTED</b></span>
+      <div class="flex items-center gap-2 bg-white/2 px-3 py-1.5 rounded-lg border border-white/5">
+        <div class="w-2 h-2 rounded-full bg-cyber-green shadow-[0_0_8px_#00ff66]" id="cannon-connection-indicator"></div>
+        <span class="text-slate-400">CANNON: <b class="text-cyber-green" id="cannon-connection-status">CONNECTED</b></span>
       </div>
-      <div class="status-item">
-        <div class="indicator" id="stream-indicator"></div>
-        <span>STREAM: <b id="stream-status">ACTIVE</b></span>
+      <div class="flex items-center gap-2 bg-white/2 px-3 py-1.5 rounded-lg border border-white/5">
+        <div class="w-2 h-2 rounded-full bg-cyber-green shadow-[0_0_8px_#00ff66]" id="stream-indicator"></div>
+        <span class="text-slate-400">STREAM: <b class="text-cyber-green" id="stream-status">ACTIVE</b></span>
       </div>
     </div>
   </header>
 
-  <div class="dashboard-grid">
-    
-    <!-- LEFT COLUMN: CHAOS CONFIG PANEL -->
-    <div class="card">
-      <div class="card-title">Chaos Control Console 🕹️</div>
+  <!-- DASHBOARD MAIN CONTENT -->
+  <main class="flex-1 grid grid-cols-[380px_1fr] gap-6 p-6 max-w-[1920px] mx-auto w-full">
+
+    <!-- LEFT SIDEBAR: CHAOS INJECTION CONSOLE -->
+    <div class="flex flex-col gap-5 bg-cyber-card backdrop-blur-xl border border-white/5 rounded-2xl p-6 shadow-2xl relative overflow-hidden before:content-[''] before:absolute before:top-0 before:left-0 before:w-full before:h-[2px] before:bg-gradient-to-r before:from-transparent before:via-white/10 before:to-transparent">
       
-      <div class="row-inputs">
-        <div class="form-group">
-          <label for="total-requests">Total Workflows</label>
-          <input type="number" id="total-requests" value="300" min="1">
+      <div>
+        <h2 class="text-sm font-bold text-slate-400 uppercase tracking-widest border-b border-white/5 pb-2">Chaos Control Console 🕹️</h2>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div class="flex flex-col gap-1">
+          <label class="text-xs text-slate-400 font-semibold" for="total-requests">Total Workflows</label>
+          <input type="number" id="total-requests" value="300" min="1" class="bg-black/50 border border-white/5 rounded-lg px-3 py-2 text-white font-mono outline-none focus:border-cyber-cyan text-sm">
         </div>
-        <div class="form-group">
-          <label for="concurrency">Concurrency</label>
-          <input type="number" id="concurrency" value="15" min="1">
+        <div class="flex flex-col gap-1">
+          <label class="text-xs text-slate-400 font-semibold" for="concurrency">Concurrency</label>
+          <input type="number" id="concurrency" value="15" min="1" class="bg-black/50 border border-white/5 rounded-lg px-3 py-2 text-white font-mono outline-none focus:border-cyber-cyan text-sm">
         </div>
       </div>
 
-      <div class="form-group">
-        <label>Workflow Templates (Mix Load)</label>
-        <div class="checkbox-group">
-          <label class="checkbox-label">
-            <input type="checkbox" id="temp-valid" value="valid_dag" checked>
+      <div class="flex flex-col gap-1.5">
+        <label class="text-xs text-slate-400 font-semibold">Workflow Templates Mix</label>
+        <div class="flex flex-col gap-2 bg-black/30 p-3 rounded-lg border border-white/5">
+          <label class="flex items-center gap-2.5 text-xs cursor-pointer select-none text-slate-200">
+            <input type="checkbox" id="temp-valid" value="valid_dag" checked class="accent-cyber-cyan w-4 h-4 rounded">
             <span>Valid Workflow Flow</span>
           </label>
-          <label class="checkbox-label">
-            <input type="checkbox" id="temp-rollback" value="saga_rollback" checked>
+          <label class="flex items-center gap-2.5 text-xs cursor-pointer select-none text-slate-200">
+            <input type="checkbox" id="temp-rollback" value="saga_rollback" checked class="accent-cyber-cyan w-4 h-4 rounded">
             <span>Saga Rollback Test (fails task_a)</span>
           </label>
-          <label class="checkbox-label">
-            <input type="checkbox" id="temp-comp" value="saga_compensation" checked>
+          <label class="flex items-center gap-2.5 text-xs cursor-pointer select-none text-slate-200">
+            <input type="checkbox" id="temp-comp" value="saga_compensation" checked class="accent-cyber-cyan w-4 h-4 rounded">
             <span>Saga Compensation Test (fails task_b)</span>
           </label>
         </div>
       </div>
 
-      <!-- Fault Probability Sliders -->
-      <div class="slider-container">
-        <div class="slider-header">
-          <label for="zombie-hang">Zombie Hang (Unresolved promises)</label>
-          <span class="slider-val" id="zombie-hang-val">5%</span>
+      <!-- Sliders -->
+      <div class="flex flex-col gap-4">
+        <div class="flex flex-col gap-1">
+          <div class="flex justify-between text-xs font-semibold">
+            <span class="text-slate-400">Zombie Hang Probability</span>
+            <span class="text-cyber-cyan font-mono" id="zombie-hang-val">5%</span>
+          </div>
+          <input type="range" id="zombie-hang" min="0" max="100" value="5" class="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-cyber-cyan">
         </div>
-        <input type="range" id="zombie-hang" min="0" max="100" value="5">
-      </div>
 
-      <div class="slider-container">
-        <div class="slider-header">
-          <label for="fatal-crash">Fatal Crash (Pod crash exits)</label>
-          <span class="slider-val" id="fatal-crash-val">2%</span>
+        <div class="flex flex-col gap-1">
+          <div class="flex justify-between text-xs font-semibold">
+            <span class="text-slate-400">Fatal Crash Probability</span>
+            <span class="text-cyber-cyan font-mono" id="fatal-crash-val">2%</span>
+          </div>
+          <input type="range" id="fatal-crash" min="0" max="100" value="2" class="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-cyber-cyan">
         </div>
-        <input type="range" id="fatal-crash" min="0" max="100" value="2">
-      </div>
 
-      <div class="slider-container">
-        <div class="slider-header">
-          <label for="business-fail">Business Fail (Saga Rollbacks)</label>
-          <span class="slider-val" id="business-fail-val">5%</span>
-        </div>
-        <input type="range" id="business-fail" min="0" max="100" value="5">
-      </div>
-
-      <div class="row-inputs">
-        <div class="form-group">
-          <label for="blast-seed">Shuffle Seed</label>
-          <input type="number" id="blast-seed" value="42561">
-        </div>
-        <div class="form-group" style="justify-content: flex-end;">
-          <button class="btn-shuffle" id="btn-shuffle-seed">🎲 Randomize</button>
+        <div class="flex flex-col gap-1">
+          <div class="flex justify-between text-xs font-semibold">
+            <span class="text-slate-400">Business Failure Probability</span>
+            <span class="text-cyber-cyan font-mono" id="business-fail-val">5%</span>
+          </div>
+          <input type="range" id="business-fail" min="0" max="100" value="5" class="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-cyber-cyan">
         </div>
       </div>
 
-      <div class="form-group">
-        <label for="schedule-delay">Delayed Start Schedule (Seconds)</label>
-        <input type="number" id="schedule-delay" value="0" min="0">
+      <!-- Seed Selection -->
+      <div class="grid grid-cols-[1fr_auto] gap-2 items-end">
+        <div class="flex flex-col gap-1">
+          <label class="text-xs text-slate-400 font-semibold" for="blast-seed">Shuffle Seed</label>
+          <input type="number" id="blast-seed" value="42561" class="bg-black/50 border border-white/5 rounded-lg px-3 py-2 text-white font-mono outline-none focus:border-cyber-cyan text-sm">
+        </div>
+        <button class="bg-white/5 border border-white/5 hover:bg-white/10 text-white text-xs font-medium py-2.5 px-3 rounded-lg transition-all" id="btn-shuffle-seed">
+          🎲 Randomize
+        </button>
       </div>
 
-      <button class="btn-fire" id="btn-fire-cannon">FIRE CHAOS CANNON 💥</button>
-      <button class="btn-stop" id="btn-stop-blast" disabled>CANCEL BLAST 🛑</button>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs text-slate-400 font-semibold" for="schedule-delay">Delayed Start (Seconds)</label>
+        <input type="number" id="schedule-delay" value="0" min="0" class="bg-black/50 border border-white/5 rounded-lg px-3 py-2 text-white font-mono outline-none focus:border-cyber-cyan text-sm">
+      </div>
 
-      <!-- Active Blast Status -->
-      <div class="blast-info-grid">
-        <div class="info-box">
-          <span class="info-lbl">BLAST STATUS</span>
-          <span class="info-val" id="blast-state">IDLE</span>
+      <!-- Action Buttons -->
+      <div class="flex flex-col gap-2 mt-2">
+        <button class="w-full py-3 bg-gradient-to-r from-cyber-red to-rose-700 text-white font-bold tracking-widest text-sm rounded-xl shadow-[0_0_15px_rgba(255,0,85,0.3)] hover:shadow-[0_0_25px_rgba(255,0,85,0.65)] hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-30 disabled:pointer-events-none" id="btn-fire-cannon">
+          FIRE CHAOS CANNON 💥
+        </button>
+        <button class="w-full py-2 bg-gradient-to-r from-cyber-amber to-amber-700 text-white font-bold text-sm rounded-xl hover:shadow-[0_0_15px_rgba(255,170,0,0.4)] disabled:opacity-20 disabled:pointer-events-none transition-all duration-200" id="btn-stop-blast" disabled>
+          CANCEL BLAST 🛑
+        </button>
+      </div>
+
+      <!-- HUD Stats -->
+      <div class="grid grid-cols-2 gap-3 bg-black/40 p-4 rounded-xl border border-white/5 mt-auto">
+        <div class="flex flex-col">
+          <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Blast Status</span>
+          <span class="text-sm font-bold font-mono tracking-wider text-slate-300" id="blast-state">IDLE</span>
         </div>
-        <div class="info-box">
-          <span class="info-lbl">SUCCESS RATE</span>
-          <span class="info-val" id="blast-success-rate">100.0%</span>
+        <div class="flex flex-col">
+          <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Success Rate</span>
+          <span class="text-sm font-bold font-mono text-cyber-green" id="blast-success-rate">100.0%</span>
         </div>
-        <div class="info-box" style="grid-column: span 2;">
-          <span class="info-lbl">PROGRESS</span>
-          <span class="info-val" id="blast-progress-txt">0 / 0</span>
-          <div class="progress-bar-container">
-            <div class="progress-bar" id="blast-progress-bar"></div>
+        <div class="col-span-2 flex flex-col gap-1.5 pt-2 border-t border-white/5">
+          <div class="flex justify-between items-center text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+            <span>Workload Progress</span>
+            <span id="blast-progress-txt" class="font-mono text-xs text-slate-300">0 / 0</span>
+          </div>
+          <div class="w-full h-2.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
+            <div class="h-full w-0 bg-gradient-to-r from-cyber-cyan to-cyber-purple shadow-[0_0_8px_#00f0ff] transition-all duration-300" id="blast-progress-bar"></div>
           </div>
         </div>
       </div>
+
     </div>
 
-    <!-- CENTER COLUMN: COMBINED MASTER CHARTS -->
-    <div class="telemetry-charts-panel">
-      <!-- Queue depth chart -->
-      <div class="card chart-card">
-        <div class="card-title">
-          <span>Broker Task Queues</span>
-          <span style="font-size: 0.75rem; text-transform: none; color: var(--accent-cyan);">RabbitMQ Depths</span>
+    <!-- RIGHT SECTION: MASTER OBSERVABILITY SUITE -->
+    <div class="flex flex-col gap-6 overflow-hidden">
+      
+      <!-- SUB-SECTION 1: COMBINED OVERVIEW CHARTS -->
+      <div class="grid grid-cols-3 gap-6">
+        
+        <!-- Queue depths -->
+        <div class="bg-cyber-card border border-white/5 rounded-2xl p-5 shadow-xl flex flex-col gap-3">
+          <div class="flex justify-between items-center border-b border-white/5 pb-2">
+            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Broker Tasks Depth</h3>
+            <span class="text-[10px] font-mono text-cyber-cyan">RabbitMQ Stream</span>
+          </div>
+          <div class="h-36 relative w-full">
+            <canvas id="queueChart"></canvas>
+          </div>
         </div>
-        <div class="chart-container">
-          <canvas id="queueChart"></canvas>
+
+        <!-- Combined CPU -->
+        <div class="bg-cyber-card border border-white/5 rounded-2xl p-5 shadow-xl flex flex-col gap-3">
+          <div class="flex justify-between items-center border-b border-white/5 pb-2">
+            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Combined Cluster CPU (m)</h3>
+            <span class="text-[10px] font-mono text-cyber-purple">All Deployments</span>
+          </div>
+          <div class="h-36 relative w-full">
+            <canvas id="cpuChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Combined Memory -->
+        <div class="bg-cyber-card border border-white/5 rounded-2xl p-5 shadow-xl flex flex-col gap-3">
+          <div class="flex justify-between items-center border-b border-white/5 pb-2">
+            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Combined Cluster Memory (Mi)</h3>
+            <span class="text-[10px] font-mono text-fuchsia-500">All Deployments</span>
+          </div>
+          <div class="h-36 relative w-full">
+            <canvas id="memChart"></canvas>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- SUB-SECTION 2: DEDICATED INDIVIDUAL SERVICE METRICS GRID -->
+      <div class="bg-cyber-card border border-white/5 rounded-2xl p-5 shadow-xl flex flex-col gap-4 flex-1 overflow-hidden">
+        <div>
+          <h3 class="text-sm font-bold text-slate-400 uppercase tracking-widest border-b border-white/5 pb-2 flex justify-between items-center">
+            <span>K8s Service Breakdowns (Individual Scales)</span>
+            <span class="text-xs font-mono font-normal normal-case text-slate-500">Tracking resource metrics dynamically per component</span>
+          </h3>
+        </div>
+
+        <!-- 8 Services Grid -->
+        <div class="grid grid-cols-4 gap-4 overflow-y-auto pr-1" id="pod-monitor-grid">
+          <!-- Dynamically populated component cards with individual wide canvas trend elements -->
+          <div class="col-span-4 py-8 text-center text-slate-500">
+            Awaiting cluster metrics payload...
+          </div>
         </div>
       </div>
 
-      <!-- CPU chart -->
-      <div class="card chart-card">
-        <div class="card-title">
-          <span>Combined CPU Utilization Trend (m)</span>
-          <span style="font-size: 0.75rem; text-transform: none; color: var(--accent-purple);">Microservice Metrics</span>
+      <!-- SUB-SECTION 3: TRACE LOGGING TERMINAL -->
+      <div class="bg-cyber-card border border-white/5 rounded-2xl p-5 shadow-xl flex flex-col gap-3">
+        <div class="flex justify-between items-center border-b border-white/5 pb-1">
+          <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Realtime Trace Logging 📟</h3>
+          <span class="text-[10px] text-cyber-green font-mono">system.log</span>
         </div>
-        <div class="chart-container">
-          <canvas id="cpuChart"></canvas>
+        <div class="bg-black/60 rounded-xl border border-white/5 p-4 font-mono text-xs text-cyber-green h-36 overflow-y-auto flex flex-col gap-1.5 shadow-[inset_0_0_15px_rgba(0,0,0,0.9)]" id="terminal-console">
+          <div class="console-line system border-l-2 border-cyber-cyan pl-2">[System] Observability stream established. Monitoring saga log pipelines...</div>
         </div>
       </div>
 
-      <!-- Memory chart -->
-      <div class="card chart-card">
-        <div class="card-title">
-          <span>Combined Memory Utilization Trend (Mi)</span>
-          <span style="font-size: 0.75rem; text-transform: none; color: #ff00ff;">Microservice Footprints</span>
-        </div>
-        <div class="chart-container">
-          <canvas id="memChart"></canvas>
-        </div>
-      </div>
     </div>
 
-    <!-- RIGHT COLUMN: SEPARATE CHARTS & LIVE EVENT LOGS -->
-    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-      <div class="card" style="flex: 1;">
-        <div class="card-title">K8s Deployment Monitor (Separate Scales)</div>
-        <div class="pod-grid" id="pod-monitor-grid">
-          <!-- Dynamic cards with individual sparkline canvas items generated dynamically -->
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">Realtime Trace Logging 📟</div>
-        <div class="console-terminal" id="terminal-console">
-          <div class="console-line system">[System] Connection active. Listening for cluster trace logs...</div>
-        </div>
-      </div>
-    </div>
-
-  </div>
+  </main>
 
   <script>
     const elements = {
@@ -792,18 +341,33 @@
     // Console Logging
     function logToConsole(message, type = 'info') {
       const line = document.createElement('div');
-      line.className = `console-line ${type}`;
+      line.className = `console-line ${type} border-l-2 pl-2`;
+      if (type === 'error') {
+        line.style.borderColor = '#ff0055';
+        line.style.color = '#ff0055';
+        line.style.fontWeight = 'bold';
+      } else if (type === 'warn') {
+        line.style.borderColor = '#ffaa00';
+        line.style.color = '#ffaa00';
+      } else if (type === 'system') {
+        line.style.borderColor = '#00f0ff';
+        line.style.color = '#00f0ff';
+      } else {
+        line.style.borderColor = '#00ff66';
+        line.style.color = '#00ff66';
+      }
+
       const ts = new Date().toLocaleTimeString();
       line.textContent = `[${ts}] ${message}`;
       elements.console.appendChild(line);
       elements.console.scrollTop = elements.console.scrollHeight;
 
-      while (elements.console.childNodes.length > 80) {
+      while (elements.console.childNodes.length > 50) {
         elements.console.removeChild(elements.console.firstChild);
       }
     }
 
-    // Chart.js Setup
+    // Chart configs
     const maxDataPoints = 30;
     const chartLabels = Array.from({length: maxDataPoints}, () => '');
 
@@ -819,10 +383,9 @@
       redis: '#64748b'
     };
 
-    // Global component registry caching sparkline instances
     const componentRegistry = {};
 
-    // 1. Combined Queue depth chart
+    // 1. Combined Queue Chart
     const queueChartCtx = document.getElementById('queueChart').getContext('2d');
     const javaQueueData = Array(maxDataPoints).fill(0);
     const nodeQueueData = Array(maxDataPoints).fill(0);
@@ -831,20 +394,20 @@
       data: {
         labels: chartLabels,
         datasets: [
-          { label: 'Java Queue', data: javaQueueData, borderColor: '#bd00ff', borderWidth: 2.5, tension: 0.3, fill: false },
-          { label: 'Node Queue', data: nodeQueueData, borderColor: '#00f0ff', borderWidth: 2.5, tension: 0.3, fill: false }
+          { label: 'Java Queue', data: javaQueueData, borderColor: '#bd00ff', borderWidth: 2, tension: 0.3, fill: false },
+          { label: 'Node Queue', data: nodeQueueData, borderColor: '#00f0ff', borderWidth: 2, tension: 0.3, fill: false }
         ]
       },
       options: getCommonChartOptions()
     });
 
-    // 2. Combined CPU chart
+    // 2. Combined CPU Chart
     const cpuChartCtx = document.getElementById('cpuChart').getContext('2d');
     const cpuDatasets = components.map(comp => ({
       label: comp,
       data: Array(maxDataPoints).fill(0),
       borderColor: componentColors[comp],
-      borderWidth: 2,
+      borderWidth: 1.5,
       tension: 0.3,
       fill: false
     }));
@@ -854,13 +417,13 @@
       options: getCommonChartOptions()
     });
 
-    // 3. Combined Memory chart
+    // 3. Combined Memory Chart
     const memChartCtx = document.getElementById('memChart').getContext('2d');
     const memDatasets = components.map(comp => ({
       label: comp,
       data: Array(maxDataPoints).fill(0),
       borderColor: componentColors[comp],
-      borderWidth: 2,
+      borderWidth: 1.5,
       tension: 0.3,
       fill: false
     }));
@@ -874,17 +437,12 @@
       return {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: 'top',
-            labels: { color: '#8a99ad', boxWidth: 8, font: { family: 'Outfit', size: 9 } }
-          }
-        },
+        plugins: { legend: { display: false } },
         scales: {
           x: { display: false },
           y: {
-            grid: { color: 'rgba(255, 255, 255, 0.03)' },
-            ticks: { color: '#8a99ad', font: { family: 'JetBrains Mono', size: 9 } }
+            grid: { color: 'rgba(255, 255, 255, 0.02)' },
+            ticks: { color: '#6e7d95', font: { family: 'JetBrains Mono', size: 9 } }
           }
         }
       };
@@ -904,21 +462,18 @@
 
     // Update Master combined charts
     function updateMasterCharts(tickCPU, tickMem, telemetry) {
-      // 1. Update queue depth chart
       javaQueueData.shift();
       javaQueueData.push(telemetry.rabbitmq.java_queue_depth);
       nodeQueueData.shift();
       nodeQueueData.push(telemetry.rabbitmq.node_queue_depth);
       queueChart.update('none');
 
-      // 2. Update CPU Chart
       cpuChart.data.datasets.forEach(ds => {
         ds.data.shift();
         ds.data.push(tickCPU[ds.label]);
       });
       cpuChart.update('none');
 
-      // 3. Update Memory Chart
       memChart.data.datasets.forEach(ds => {
         ds.data.shift();
         ds.data.push(tickMem[ds.label]);
@@ -926,67 +481,77 @@
       memChart.update('none');
     }
 
-    // Update dynamic pods cards with separate sparkline graphs
-    function updateComponentRegistry(tickCPU, tickMem, tickStatus, tickRestarts, tickReplicas, tickAge) {
+    // Update dynamic pods cards with separate detailed charts
+    function updateComponentRegistry(tickCPU, tickMem, tickStatus, tickRestarts, tickReplicas) {
       components.forEach(compName => {
         let registryEntry = componentRegistry[compName];
 
-        // Create DOM nodes dynamically if not exists
         if (!registryEntry) {
           const cardHtml = `
-            <div class="pod-card" id="comp-card-${compName}">
-              <div class="pod-header">
-                <span class="pod-name">${compName.toUpperCase()}</span>
-                <span class="pod-status-badge" id="comp-status-${compName}">IDLE</span>
+            <div class="bg-black/30 border border-white/5 rounded-xl p-4 flex flex-col gap-3 hover:border-white/10 transition-all shadow-md" id="comp-card-${compName}">
+              <div class="flex justify-between items-center">
+                <span class="text-xs font-bold text-slate-200 tracking-wider">${compName.toUpperCase()}</span>
+                <span class="text-[9px] font-bold px-2 py-0.5 rounded bg-cyber-green/10 border border-cyber-green/20 text-cyber-green" id="comp-status-${compName}">IDLE</span>
               </div>
-              <div style="display: flex; justify-content: space-between; align-items: center; gap: 15px;">
-                <div class="pod-details" style="display: flex; flex-direction: column; gap: 4px; font-size: 0.78rem; flex: 1;">
-                  <div>CPU: <span class="detail-val" id="comp-cpu-${compName}">0m</span></div>
-                  <div>Mem: <span class="detail-val" id="comp-mem-${compName}">0Mi</span></div>
-                  <div>Replicas: <span class="detail-val" id="comp-replicas-${compName}">0</span></div>
-                  <div>Restarts: <span class="detail-val" id="comp-restarts-${compName}">0</span></div>
-                </div>
-                <div style="width: 140px; height: 50px; position: relative;">
-                  <canvas id="comp-sparkline-${compName}"></canvas>
-                </div>
+              
+              <div class="grid grid-cols-4 gap-1 text-[10px] text-slate-400 border-b border-white/5 pb-2 font-mono">
+                <div>CPU: <b class="text-slate-200" id="comp-cpu-${compName}">0m</b></div>
+                <div>Mem: <b class="text-slate-200" id="comp-mem-${compName}">0Mi</b></div>
+                <div>Reps: <b class="text-slate-200" id="comp-replicas-${compName}">0</b></div>
+                <div>Rst: <b class="text-slate-200" id="comp-restarts-${compName}">0</b></div>
+              </div>
+
+              <div class="h-24 w-full relative">
+                <canvas id="comp-detail-chart-${compName}"></canvas>
               </div>
             </div>
           `;
 
-          // Append to Grid Container
           const tempDiv = document.createElement('div');
           tempDiv.innerHTML = cardHtml.trim();
           elements.podGrid.appendChild(tempDiv.firstChild);
 
-          // Get sparkline canvas context
-          const sparkCtx = document.getElementById(`comp-sparkline-${compName}`).getContext('2d');
+          // Dedicated chart for this specific service
+          const detailCtx = document.getElementById(`comp-detail-chart-${compName}`).getContext('2d');
           const cpuSparkData = Array(15).fill(0);
           const memSparkData = Array(15).fill(0);
 
-          const sparkChart = new Chart(sparkCtx, {
+          const detailChart = new Chart(detailCtx, {
             type: 'line',
             data: {
               labels: Array.from({length: 15}, () => ''),
               datasets: [
-                { data: cpuSparkData, borderColor: varColor(componentColors[compName], 0.9), borderWidth: 2, tension: 0.3, fill: false, yAxisID: 'yCPU' },
-                { data: memSparkData, borderColor: '#a855f7', borderWidth: 1.5, tension: 0.3, borderDash: [2, 2], fill: false, yAxisID: 'yMem' }
+                { label: 'CPU (m)', data: cpuSparkData, borderColor: componentColors[compName], borderWidth: 1.8, tension: 0.3, fill: false, yAxisID: 'yCPU' },
+                { label: 'Mem (Mi)', data: memSparkData, borderColor: '#bd00ff', borderWidth: 1.2, tension: 0.3, borderDash: [2, 2], fill: false, yAxisID: 'yMem' }
               ]
             },
             options: {
               responsive: true,
               maintainAspectRatio: false,
-              plugins: { legend: { display: false }, tooltip: { enabled: false } },
+              plugins: { legend: { display: false } },
               scales: { 
                 x: { display: false }, 
-                yCPU: { display: false, type: 'linear', position: 'left' },
-                yMem: { display: false, type: 'linear', position: 'right' }
+                yCPU: { 
+                  display: true, 
+                  type: 'linear', 
+                  position: 'left',
+                  grid: { color: 'rgba(255,255,255,0.01)' },
+                  ticks: { color: '#6e7d95', font: { family: 'JetBrains Mono', size: 8 } }
+                },
+                yMem: { 
+                  display: true, 
+                  type: 'linear', 
+                  position: 'right',
+                  grid: { display: false },
+                  ticks: { color: '#6e7d95', font: { family: 'JetBrains Mono', size: 8 } }
+                }
               },
               elements: { point: { radius: 0 } }
             }
           });
 
           registryEntry = {
-            chart: sparkChart,
+            chart: detailChart,
             cpuData: cpuSparkData,
             memData: memSparkData,
             statusEl: document.getElementById(`comp-status-${compName}`),
@@ -999,13 +564,13 @@
           componentRegistry[compName] = registryEntry;
         }
 
-        // Update cached DOM elements
+        // Update stats
         const status = tickStatus[compName] || 'IDLE';
         registryEntry.statusEl.textContent = status.toUpperCase();
-        if (status.includes('Error') || status.includes('Crash') || status.includes('BackOff')) {
-          registryEntry.statusEl.className = 'pod-status-badge error';
+        if (status.includes('Error') || status.includes('Crash') || status.includes('BackOff') || status.includes('Terminating')) {
+          registryEntry.statusEl.className = 'text-[9px] font-bold px-2 py-0.5 rounded bg-cyber-red/10 border border-cyber-red/20 text-cyber-red animate-pulse';
         } else {
-          registryEntry.statusEl.className = 'pod-status-badge';
+          registryEntry.statusEl.className = 'text-[9px] font-bold px-2 py-0.5 rounded bg-cyber-green/10 border border-cyber-green/20 text-cyber-green';
         }
 
         registryEntry.cpuEl.textContent = `${tickCPU[compName]}m`;
@@ -1013,20 +578,18 @@
         registryEntry.replicasEl.textContent = tickReplicas[compName];
         registryEntry.restartsEl.textContent = tickRestarts[compName];
         if (tickRestarts[compName] > 0) {
-          registryEntry.restartsEl.style.color = 'var(--accent-amber)';
+          registryEntry.restartsEl.className = 'text-cyber-amber';
+        } else {
+          registryEntry.restartsEl.className = 'text-slate-200';
         }
 
-        // Update separate sparkline chart metrics at its own relative scale
+        // Push data points
         registryEntry.cpuData.shift();
         registryEntry.cpuData.push(tickCPU[compName]);
         registryEntry.memData.shift();
         registryEntry.memData.push(tickMem[compName]);
         registryEntry.chart.update('none');
       });
-    }
-
-    function varColor(hex, alpha) {
-      return hex; // Helper to pass custom colors
     }
 
     // Fire Cannon
@@ -1098,22 +661,22 @@
 
         const status = await res.json();
         
-        elements.cannonIndicator.className = 'indicator';
+        elements.cannonIndicator.className = 'w-2 h-2 rounded-full bg-cyber-green shadow-[0_0_8px_#00ff66]';
         elements.cannonConnText.textContent = 'CONNECTED';
-        elements.cannonConnText.style.color = 'var(--accent-green)';
+        elements.cannonConnText.className = 'text-cyber-green';
 
         elements.blastState.textContent = status.status;
         if (status.status === 'RUNNING') {
-          elements.blastState.style.color = 'var(--accent-red)';
+          elements.blastState.className = 'text-sm font-bold font-mono tracking-wider text-cyber-red animate-pulse';
           elements.btnFire.disabled = true;
           elements.btnStop.disabled = false;
         } else if (status.status === 'SCHEDULED') {
-          elements.blastState.style.color = 'var(--accent-amber)';
+          elements.blastState.className = 'text-sm font-bold font-mono tracking-wider text-cyber-amber';
           elements.blastState.textContent = `SCHEDULED (${status.schedule_remaining_seconds}s)`;
           elements.btnFire.disabled = true;
           elements.btnStop.disabled = false;
         } else {
-          elements.blastState.style.color = '#fff';
+          elements.blastState.className = 'text-sm font-bold font-mono tracking-wider text-slate-300';
           elements.btnFire.disabled = false;
           elements.btnStop.disabled = true;
         }
@@ -1124,32 +687,31 @@
         elements.blastRate.textContent = (status.success_rate * 100).toFixed(1) + '%';
 
       } catch (err) {
-        elements.cannonIndicator.className = 'indicator inactive';
+        elements.cannonIndicator.className = 'w-2 h-2 rounded-full bg-cyber-red shadow-[0_0_8px_#ff0055]';
         elements.cannonConnText.textContent = 'DISCONNECTED';
-        elements.cannonConnText.style.color = 'var(--accent-red)';
+        elements.cannonConnText.className = 'text-cyber-red';
         elements.blastState.textContent = 'UNKNOWN';
         elements.btnFire.disabled = true;
         elements.btnStop.disabled = true;
       }
     }
 
-    // Clear initial DOM loading message once stream begins
     let hasLoadedFirstTelemetry = false;
 
     // Telemetry SSE stream
     const sse = new EventSource('/api/v1/telemetry/stream');
 
     sse.onopen = () => {
-      elements.streamIndicator.className = 'indicator';
+      elements.streamIndicator.className = 'w-2 h-2 rounded-full bg-cyber-green shadow-[0_0_8px_#00ff66]';
       elements.streamText.textContent = 'ACTIVE';
-      elements.streamText.style.color = 'var(--accent-green)';
+      elements.streamText.className = 'text-cyber-green';
       logToConsole('Telemetry stream channel active.', 'system');
     };
 
     sse.onerror = () => {
-      elements.streamIndicator.className = 'indicator inactive';
+      elements.streamIndicator.className = 'w-2 h-2 rounded-full bg-cyber-red shadow-[0_0_8px_#ff0055]';
       elements.streamText.textContent = 'DISCONNECTED';
-      elements.streamText.style.color = 'var(--accent-red)';
+      elements.streamText.className = 'text-cyber-red';
     };
 
     sse.onmessage = (event) => {
@@ -1157,7 +719,7 @@
         const telemetry = JSON.parse(event.data);
 
         if (!hasLoadedFirstTelemetry) {
-          elements.podGrid.innerHTML = ''; // Clear fallback card
+          elements.podGrid.innerHTML = ''; 
           hasLoadedFirstTelemetry = true;
         }
         
@@ -1187,7 +749,7 @@
             tickReplicas[comp]++;
             tickRestarts[comp] += pod.restarts;
 
-            // Prioritize error state logging
+            // Prioritize error state display
             if (pod.status.includes('CrashLoop') || pod.status.includes('Error') || pod.status.includes('OOM') || tickStatus[comp] === 'IDLE') {
               tickStatus[comp] = pod.status;
             }
@@ -1197,7 +759,7 @@
         // 1. Update Combined Master Trends
         updateMasterCharts(tickCPU, tickMem, telemetry);
 
-        // 2. Update dynamic separate cards with sparkline charts
+        // 2. Update separate cards with sparkline charts
         updateComponentRegistry(tickCPU, tickMem, tickStatus, tickRestarts, tickReplicas);
 
         // 3. Scan for incidents or logs to write to log console
@@ -1214,14 +776,14 @@
 
         // 4. Update Engine status HUD banner
         if (engineCompromised) {
-          elements.masterBanner.textContent = 'SAGA COORDINATOR IN DISTRESS';
-          elements.masterBanner.className = 'engine-status-banner compromised';
+          elements.masterBanner.textContent = 'SAGA ENGINE IN DISTRESS ⚠️';
+          elements.masterBanner.className = 'ml-6 px-4 py-1 rounded-full text-xs font-mono font-bold tracking-wider bg-cyber-red/10 border border-cyber-red/30 text-cyber-red status-pulse-red';
         } else if (activeBlasts) {
-          elements.masterBanner.textContent = 'CHAOS CYCLONE INJECTING FAULTS';
-          elements.masterBanner.className = 'engine-status-banner compromised';
+          elements.masterBanner.textContent = 'CHAOS CYCLONE ACTIVE 💥';
+          elements.masterBanner.className = 'ml-6 px-4 py-1 rounded-full text-xs font-mono font-bold tracking-wider bg-cyber-red/10 border border-cyber-red/30 text-cyber-red status-pulse-red';
         } else {
           elements.masterBanner.textContent = 'SAGA ENGINE OPERATING NORMALLY';
-          elements.masterBanner.className = 'engine-status-banner';
+          elements.masterBanner.className = 'ml-6 px-4 py-1 rounded-full text-xs font-mono font-bold tracking-wider bg-cyber-green/5 border border-cyber-green/20 text-cyber-green';
         }
 
       } catch (err) {
