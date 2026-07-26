@@ -8,15 +8,14 @@
  * Usage: node scripts/port_forward.js
  *
  * Services forwarded:
- *   PostgreSQL   localhost:5432  → pod:5432
- *   Redis        localhost:6379  → pod:6379
- *   RabbitMQ     localhost:5672  → pod:5672   (AMQP)
- *                localhost:15672 → pod:15672  (Management UI)
- *   Gate         localhost:8080  → pod:8080   (API Gateway)
- *   Broker       localhost:8081  → pod:8081   (Java Saga Broker)
- *   Worker       localhost:8084  → pod:8084   (Node.js I/O Worker)
- *   Cannon       localhost:8083  → pod:8083   (Chaos Cannon API)
- *   Probe        localhost:8082  → pod:8082   (Telemetry Observer & Dashboard)
+ *   PostgreSQL   localhost:5432  → statefulset/postgres:5432
+ *   Redis        localhost:6379  → deployment/redis:6379
+ *   RabbitMQ     localhost:5672  → deployment/rabbitmq:5672   (AMQP)
+ *                localhost:15672 → deployment/rabbitmq:15672  (Management UI)
+ *   Gate         localhost:8080  → service/gate:8080          (API Gateway)
+ *   Broker       localhost:8081  → deployment/broker:8081     (Java Saga Broker)
+ *   Cannon       localhost:8083  → service/cannon:8083        (Chaos Cannon API)
+ *   Probe        localhost:8082  → service/probe:8082         (Telemetry Observer & Dashboard)
  */
 
 const { spawn, execSync } = require('child_process');
@@ -29,24 +28,23 @@ const C = {
   cyan:   '\x1b[36m',
   purple: '\x1b[35m',
   bold:   '\x1b[1m',
+  dim:    '\x1b[2m',
 };
 
 // ── targets ───────────────────────────────────────────────────────────────────
-// Each entry: { name: 'kind/name', ports: ['local:remote', ...] }
-// 'kind' is deployment|statefulset|service — kubectl port-forward accepts all.
+// Each entry: { label, name: 'kind/name', ports: ['local:remote', ...] }
 const targets = [
   // ── Backing infrastructure ──────────────────────────────────────────────────
-  { label: 'PostgreSQL',      name: 'statefulset/postgres',   ports: ['5432:5432']          },
-  { label: 'Redis',           name: 'deployment/redis',       ports: ['6379:6379']          },
-  { label: 'RabbitMQ (AMQP)',  name: 'deployment/rabbitmq',   ports: ['5672:5672']          },
-  { label: 'RabbitMQ (UI)',    name: 'deployment/rabbitmq',   ports: ['15672:15672']        },
+  { label: 'PostgreSQL',      name: 'statefulset/postgres',   ports: ['5432:5432']    },
+  { label: 'Redis',           name: 'deployment/redis',       ports: ['6379:6379']    },
+  { label: 'RabbitMQ (AMQP)',  name: 'deployment/rabbitmq',   ports: ['5672:5672']    },
+  { label: 'RabbitMQ (UI)',    name: 'deployment/rabbitmq',   ports: ['15672:15672']  },
 
   // ── Application services ────────────────────────────────────────────────────
-  { label: 'Gate (API GW)',   name: 'service/gate',           ports: ['8080:8080']          },
-  { label: 'Broker (Saga)',   name: 'service/broker',         ports: ['8081:8081']          },
-  { label: 'Worker (Node)',   name: 'service/worker',         ports: ['8084:8084']          },
-  { label: 'Cannon (Chaos)',  name: 'service/cannon',         ports: ['8083:8083']          },
-  { label: 'Probe (HUD)',     name: 'service/probe',          ports: ['8082:8082']          },
+  { label: 'Gate (API GW)',   name: 'service/gate',           ports: ['8080:8080']    },
+  { label: 'Broker (Saga)',   name: 'deployment/broker',      ports: ['8081:8081']    },
+  { label: 'Cannon (Chaos)',  name: 'service/cannon',         ports: ['8083:8083']    },
+  { label: 'Probe (HUD)',     name: 'service/probe',          ports: ['8082:8082']    },
 ];
 
 // ── pre-flight checks ─────────────────────────────────────────────────────────
