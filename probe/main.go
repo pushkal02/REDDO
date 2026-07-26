@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -37,9 +38,10 @@ type TelemetryPayload struct {
 }
 
 var (
-	k8sClient   *http.Client
-	k8sToken    string
-	rabbitmqURL = "http://guest:guest@localhost:15672"
+	k8sClient    *http.Client
+	k8sLogClient *http.Client
+	k8sToken     string
+	rabbitmqURL  = "http://guest:guest@localhost:15672"
 )
 
 func main() {
@@ -110,6 +112,7 @@ func initK8sClient() {
 	if err != nil {
 		log.Printf("[Warning] K8s ServiceAccount token not found. Running in localized fallback mode: %v", err)
 		k8sClient = http.DefaultClient
+		k8sLogClient = http.DefaultClient
 		return
 	}
 	k8sToken = strings.TrimSpace(string(tokenBytes))
@@ -122,6 +125,12 @@ func initK8sClient() {
 				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 			},
 			Timeout: 3 * time.Second,
+		}
+		k8sLogClient = &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			},
+			Timeout: 0, // No timeout for streaming pod log streams!
 		}
 		return
 	}
@@ -137,7 +146,16 @@ func initK8sClient() {
 		},
 		Timeout: 3 * time.Second,
 	}
-	log.Println("[Telemetry Observer] Kubernetes API Client initialized successfully.")
+
+	k8sLogClient = &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				RootCAs: caCertPool,
+			},
+		},
+		Timeout: 0, // No timeout for streaming pod log streams!
+	}
+	log.Println("[Telemetry Observer] Kubernetes API Clients (polling + streaming) initialized successfully.")
 }
 
 func handleSSEStream(w http.ResponseWriter, r *http.Request) {
@@ -189,13 +207,79 @@ func handleLogsStream(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("[Logs SSE] Client connected from %s", r.RemoteAddr)
 
-	logChan := make(chan string, 100)
+	logChan := make(chan string, 500)
 	done := make(chan struct{})
 	defer close(done)
 
+	var mu sync.Mutex
 	tailingPods := make(map[string]bool)
 
-	// Dynamic pod discovery loop
+	discoverPods := func() {
+		if k8sToken == "" {
+			mockPayload, _ := json.Marshal(map[string]string{
+				"pod":     "gate-mock-12345",
+				"service": "gate",
+				"message": fmt.Sprintf("2026-07-07T00:00:00Z [INFO ] [gate] - Mock gateway log tick %d", time.Now().Unix()),
+			})
+			select {
+			case logChan <- string(mockPayload):
+			case <-done:
+				return
+			default:
+			}
+			return
+		}
+
+		podsURL := "https://kubernetes.default.svc/api/v1/namespaces/reddo/pods"
+		req, err := http.NewRequest("GET", podsURL, nil)
+		if err != nil {
+			return
+		}
+		req.Header.Set("Authorization", "Bearer "+k8sToken)
+		resp, err := k8sClient.Do(req)
+		if err != nil {
+			return
+		}
+
+		var podList struct {
+			Items []struct {
+				Metadata struct {
+					Name string `json:"name"`
+				} `json:"metadata"`
+				Status struct {
+					Phase string `json:"phase"`
+				} `json:"status"`
+			} `json:"items"`
+		}
+
+		if json.NewDecoder(resp.Body).Decode(&podList) == nil {
+			for _, item := range podList.Items {
+				podName := item.Metadata.Name
+				if item.Status.Phase == "Running" {
+					mu.Lock()
+					alreadyTailing := tailingPods[podName]
+					if !alreadyTailing {
+						tailingPods[podName] = true
+						go func(name string) {
+							defer func() {
+								mu.Lock()
+								delete(tailingPods, name)
+								mu.Unlock()
+							}()
+							tailPodLogs(name, logChan, done)
+						}(podName)
+					}
+					mu.Unlock()
+				}
+			}
+		}
+		resp.Body.Close()
+	}
+
+	// Run initial immediate discovery scan
+	go discoverPods()
+
+	// Dynamic pod discovery loop ticker
 	go func() {
 		ticker := time.NewTicker(3 * time.Second)
 		defer ticker.Stop()
@@ -205,52 +289,7 @@ func handleLogsStream(w http.ResponseWriter, r *http.Request) {
 			case <-done:
 				return
 			case <-ticker.C:
-				if k8sToken == "" {
-					mockPayload, _ := json.Marshal(map[string]string{
-						"pod":     "gate-mock-12345",
-						"service": "gate",
-						"message": fmt.Sprintf("2026-07-07T00:00:00Z [INFO ] [gate] - Mock gateway log tick %d", time.Now().Unix()),
-					})
-					select {
-					case logChan <- string(mockPayload):
-					case <-done:
-						return
-					default:
-					}
-					continue
-				}
-
-				podsURL := "https://kubernetes.default.svc/api/v1/namespaces/reddo/pods"
-				req, err := http.NewRequest("GET", podsURL, nil)
-				if err != nil {
-					continue
-				}
-				req.Header.Set("Authorization", "Bearer "+k8sToken)
-				resp, err := k8sClient.Do(req)
-				if err != nil {
-					continue
-				}
-
-				var podList struct {
-					Items []struct {
-						Metadata struct {
-							Name string `json:"name"`
-						} `json:"metadata"`
-						Status struct {
-							Phase string `json:"phase"`
-						} `json:"status"`
-					} `json:"items"`
-				}
-
-				if json.NewDecoder(resp.Body).Decode(&podList) == nil {
-					for _, item := range podList.Items {
-						if item.Status.Phase == "Running" && !tailingPods[item.Metadata.Name] {
-							tailingPods[item.Metadata.Name] = true
-							go tailPodLogs(item.Metadata.Name, logChan, done)
-						}
-					}
-				}
-				resp.Body.Close()
+				discoverPods()
 			}
 		}
 	}()
@@ -275,7 +314,8 @@ func tailPodLogs(podName string, logChan chan string, done chan struct{}) {
 	}
 	req.Header.Set("Authorization", "Bearer "+k8sToken)
 
-	resp, err := k8sClient.Do(req)
+	// Use k8sLogClient which has NO TIMEOUT!
+	resp, err := k8sLogClient.Do(req)
 	if err != nil {
 		return
 	}
