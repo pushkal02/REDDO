@@ -294,6 +294,8 @@ func (b *Blaster) runBlast(ctx context.Context) {
 
 	log.Printf("[Chaos Cannon] Starting worker pool of size %d...", concurrency)
 
+	runID := time.Now().Unix()
+
 	for w := 0; w < concurrency; w++ {
 		wg.Add(1)
 		go func(workerID int) {
@@ -309,7 +311,7 @@ func (b *Blaster) runBlast(ctx context.Context) {
 					}
 
 					// Build payload based on shuffled parameters
-					payload := b.generatePayload(idx, cfg.Seed, cfg.WorkflowTemplates, zombieSet[idx], crashSet[idx], failSet[idx])
+					payload := b.generatePayload(idx, cfg.Seed, runID, cfg.WorkflowTemplates, zombieSet[idx], crashSet[idx], failSet[idx])
 
 					// Execute POST call to Gateway
 					err := b.submitWorkflow(ctx, client, payload)
@@ -370,12 +372,12 @@ func (b *Blaster) submitWorkflow(ctx context.Context, client *http.Client, paylo
 }
 
 // generatePayload builds a workflow DAG inserting relevant failure instructions
-func (b *Blaster) generatePayload(idx int, blastSeed int64, templates []string, zombie, crash, fail bool) map[string]interface{} {
+func (b *Blaster) generatePayload(idx int, blastSeed int64, runID int64, templates []string, zombie, crash, fail bool) map[string]interface{} {
 	// Select template using index-derived RNG to maintain deterministic runs
 	templateIndex := (int(blastSeed) + idx) % len(templates)
 	templateName := templates[templateIndex]
 
-	wfID := fmt.Sprintf("blast-%d-%d", blastSeed, idx)
+	wfID := fmt.Sprintf("blast-%d-%d-%d", blastSeed, runID, idx)
 
 	var name string
 	var tasks map[string]interface{}
