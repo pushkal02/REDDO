@@ -75,8 +75,23 @@ export async function connectRabbitMQ() {
         // 2. Set task status to RUNNING in database
         await updateTaskStatus(taskExecutionId, 'RUNNING', undefined, undefined, correlationId, requestId);
 
-        // 3. Execute with Chaos simulation
-        await executeTaskWithChaos(taskExecutionId, taskKey, inputData, correlationId, requestId);
+        // 3. Execute with Chaos simulation & 10s Task Timeout Guard
+        const timeoutMs = parseInt(process.env.TASK_TIMEOUT_MS || '10000', 10);
+        let timeoutId: NodeJS.Timeout | undefined;
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(() => {
+            reject(new Error(`Task execution timed out after ${timeoutMs}ms (ZOMBIE_HANG timeout guard triggered)`));
+          }, timeoutMs);
+        });
+
+        try {
+          await Promise.race([
+            executeTaskWithChaos(taskExecutionId, taskKey, inputData, correlationId, requestId),
+            timeoutPromise
+          ]);
+        } finally {
+          if (timeoutId) clearTimeout(timeoutId);
+        }
 
         // 4. Update status and progress DAG on success
         await completeTaskAndProgress(taskExecutionId, correlationId, requestId, publishTaskMessage);
